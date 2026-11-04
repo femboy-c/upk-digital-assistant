@@ -6,11 +6,11 @@
 """
 import logging
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from .config import IS_PRODUCTION
-from .models import Category, KnowledgeBase, Location, User
+from .models import Category, KnowledgeBase, Location, Ticket, User
 from .security import hash_password
 
 logger = logging.getLogger(__name__)
@@ -26,14 +26,16 @@ CATEGORIES = [
 
 LOCATIONS = [
     ("1", "101", "", "lab101"),
-    ("1", "", "Общая зона: холл 1 этажа", "hall1"),
+    ("1", "", "Коридор 1 этажа", "corridor-1"),
     ("1", "", "Столовая", "canteen"),
     ("1", "", "Спортзал", "gym"),
     ("1", "", "Актовый зал", "assembly-hall"),
     ("1", "", "Женская раздевалка", "locker-women"),
     ("1", "", "Мужская раздевалка", "locker-men"),
     ("2", "214", "", "room214"),
+    ("2", "", "Коридор 2 этажа", "corridor-2"),
     ("3", "305", "", "room305"),
+    ("3", "", "Коридор 3 этажа", "corridor-3"),
     ("3", "", "Медпункт", "medical"),
     ("yard-front", "", "Передний двор", "yard-front"),
     ("yard-back", "", "Задний двор", "yard-back"),
@@ -138,9 +140,34 @@ def seed_database(db: Session) -> None:
         for name, description in CATEGORIES:
             db.add(Category(name=name, description=description))
 
+    # В пустую базу добавляем весь каталог. В уже работающую — только новые
+    # коридоры, чтобы не возвращать удалённые или переименованные помещения.
     if db.scalar(select(Location).limit(1)) is None:
         for floor, room, zone_name, qr_key in LOCATIONS:
             db.add(Location(floor=floor, room=room, zone_name=zone_name, qr_key=qr_key))
+    else:
+        existing_keys = set(db.scalars(select(Location.qr_key)).all())
+        for floor, room, zone_name, qr_key in LOCATIONS:
+            if qr_key.startswith("corridor-") and qr_key not in existing_keys:
+                db.add(Location(floor=floor, room=room, zone_name=zone_name, qr_key=qr_key))
+                existing_keys.add(qr_key)
+    db.flush()
+
+    # Убираем устаревшую «Общую зону: холл 1 этажа». Заявки, если они были,
+    # переносим на новый «Коридор 1 этажа», чтобы не потерять историю.
+    legacy_hall = db.scalar(select(Location).where(Location.qr_key == "hall1"))
+    if legacy_hall is not None:
+        corridor = db.scalar(select(Location).where(Location.qr_key == "corridor-1"))
+        if corridor is not None:
+            db.execute(
+                update(Ticket)
+                .where(Ticket.location_id == legacy_hall.id)
+                .values(location_id=corridor.id)
+            )
+            db.delete(legacy_hall)
+            logger.info("Устаревшее помещение hall1 заменено на corridor-1")
+        else:
+            logger.warning("Не удалось удалить hall1: не найден corridor-1")
 
     if db.scalar(select(User).limit(1)) is None:
         if IS_PRODUCTION:

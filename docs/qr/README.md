@@ -5,14 +5,16 @@
 | Место | QR-ключ | Файл |
 |---|---|---|
 | 1 этаж: кабинет 101 | `lab101` | `lab101.png` |
-| 1 этаж: холл | `hall1` | `hall1.png` |
+| 1 этаж: коридор | `corridor-1` | `corridor-1.png` |
 | 1 этаж: столовая | `canteen` | `canteen.png` |
 | 1 этаж: спортзал | `gym` | `gym.png` |
 | 1 этаж: актовый зал | `assembly-hall` | `assembly-hall.png` |
 | 1 этаж: женская раздевалка | `locker-women` | `locker-women.png` |
 | 1 этаж: мужская раздевалка | `locker-men` | `locker-men.png` |
 | 2 этаж: кабинет 214 | `room214` | `room214.png` |
+| 2 этаж: коридор | `corridor-2` | `corridor-2.png` |
 | 3 этаж: кабинет 305 | `room305` | `room305.png` |
+| 3 этаж: коридор | `corridor-3` | `corridor-3.png` |
 | 3 этаж: медпункт | `medical` | `medical.png` |
 | Передний двор | `yard-front` | `yard-front.png` |
 | Задний двор | `yard-back` | `yard-back.png` |

@@ -15,12 +15,15 @@ os.environ.setdefault("PUBLIC_BASE_URL", "http://upk.test")
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import sessionmaker
 
 from app.config import qr_target_url
-from app.database import SessionLocal
+from app.database import Base, SessionLocal
 from app.main import app
-from app.models import Location
+from app.models import Location, Ticket
+from app.security import hash_token
+from app.seed import seed_database
 
 
 @pytest.fixture(scope="module")
@@ -89,6 +92,50 @@ def test_location_catalog_has_college_areas(client: TestClient):
     assert "Задний двор" in page.text
     assert 'value="yard-back"' in page.text
     assert "Главный корпус" not in page.text
+
+
+def test_floor_corridors_exist_instead_of_old_hall(client: TestClient):
+    with SessionLocal() as db:
+        keys = set(db.scalars(select(Location.qr_key)).all())
+        titles = {location.title for location in db.scalars(select(Location)).all()}
+
+    assert {"corridor-1", "corridor-2", "corridor-3"} <= keys
+    assert "hall1" not in keys
+    assert "Коридор 1 этажа" in titles
+    assert "Коридор 2 этажа" in titles
+    assert "Коридор 3 этажа" in titles
+    assert "Общая зона: холл 1 этажа" not in titles
+
+
+def test_legacy_hall_is_removed_and_its_ticket_moves_to_corridor():
+    memory_engine = create_engine("sqlite://")
+    Base.metadata.create_all(memory_engine)
+    Session = sessionmaker(bind=memory_engine)
+
+    with Session() as db:
+        legacy = Location(floor="1", zone_name="Общая зона: холл 1 этажа", qr_key="hall1")
+        db.add(legacy)
+        db.flush()
+        db.add(
+            Ticket(
+                public_number="TEST-HALL1",
+                title="Старая заявка",
+                description="Заявка из старого холла",
+                location_id=legacy.id,
+                status="Новая",
+                tracking_token_hash=hash_token("legacy-token"),
+            )
+        )
+        db.commit()
+
+    with Session() as db:
+        seed_database(db)
+        assert db.scalar(select(Location).where(Location.qr_key == "hall1")) is None
+        corridor = db.scalar(select(Location).where(Location.qr_key == "corridor-1"))
+        ticket = db.scalar(select(Ticket).where(Ticket.public_number == "TEST-HALL1"))
+        assert corridor is not None
+        assert ticket is not None
+        assert ticket.location_id == corridor.id
 
 
 def test_unknown_qr_shows_error_and_manual_choice(client: TestClient):

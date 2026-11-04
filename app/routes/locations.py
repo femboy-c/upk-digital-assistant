@@ -54,7 +54,7 @@ def _validate_location(
         return values, "Выберите этаж или территорию."
 
     if not values["room"] and not values["zone_name"]:
-        return values, "Укажите кабинет или название зоны (например, «Холл 1 этажа»)."
+        return values, "Укажите кабинет или название зоны (например, «Коридор 1 этажа»)."
 
     if not QR_KEY_RE.fullmatch(values["qr_key"]):
         return values, (
