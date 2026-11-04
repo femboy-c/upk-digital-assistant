@@ -21,6 +21,19 @@
     <dt>Место</dt><dd>{{ ticket.location.title if ticket.location else "—" }}</dd>
     <dt>Категория</dt><dd>{{ ticket.category.name if ticket.category else "—" }}</dd>
     <dt>Исполнитель</dt><dd>{{ ticket.assignee.name if ticket.assignee else "не назначен" }}</dd>
+    <dt>Приоритет</dt><dd><span class="badge" data-priority="{{ ticket.priority }}">{{ ticket.priority }}</span></dd>
+    <dt>Телефон</dt>
+    <dd>
+      {% if ticket.contact_phone %}
+        <a href="tel:{{ ticket.contact_phone }}">{{ ticket.contact_phone }}</a>
+      {% else %}—{% endif %}
+    </dd>
+    <dt>Email</dt>
+    <dd>
+      {% if ticket.contact_email %}
+        <a href="mailto:{{ ticket.contact_email }}">{{ ticket.contact_email }}</a>
+      {% else %}—{% endif %}
+    </dd>
   </dl>
 
   {% if attachments %}
@@ -92,6 +105,13 @@
       </select>
       <p class="hint">Показаны только допустимые переходы из текущего статуса.</p>
 
+      <label for="priority">Приоритет</label>
+      <select id="priority" name="priority">
+        {% for p in priorities %}
+          <option value="{{ p }}" {% if ticket.priority == p %}selected{% endif %}>{{ p }}</option>
+        {% endfor %}
+      </select>
+
       <label for="assignee_id">Исполнитель</label>
       <select id="assignee_id" name="assignee_id">
         <option value="">— не назначен —</option>
@@ -99,6 +119,25 @@
           <option value="{{ a.id }}" {% if ticket.assignee_id == a.id %}selected{% endif %}>{{ a.name }}</option>
         {% endfor %}
       </select>
+
+      <label>Быстрые ответы</label>
+      <div class="reply-templates">
+        <button type="button" class="btn btn-ghost"
+                data-reply-status="Нужны уточнения"
+                data-reply-text="Уточните, пожалуйста, что именно произошло, где это находится и когда началось. Можно приложить фотографию.">
+          Нужны уточнения
+        </button>
+        <button type="button" class="btn btn-ghost"
+                data-reply-status="В работе"
+                data-reply-text="Заявка передана исполнителю и взята в работу.">
+          Передано в работу
+        </button>
+        <button type="button" class="btn btn-ghost"
+                data-reply-status="Решена"
+                data-reply-text="Проблема устранена. Проверьте, пожалуйста, результат.">
+          Проблема устранена
+        </button>
+      </div>
 
       <label for="note">Комментарий / результат</label>
       <textarea id="note" name="note" rows="3" maxlength="{{ max_note_length }}"
@@ -170,4 +209,27 @@
   </form>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const note = document.getElementById("note");
+  const status = document.getElementById("status");
+  if (!note) return;
+
+  document.querySelectorAll("[data-reply-text]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      note.value = button.dataset.replyText || "";
+      if (status && button.dataset.replyStatus) {
+        const option = Array.from(status.options).find(function (item) {
+          return item.value === button.dataset.replyStatus;
+        });
+        if (option) status.value = button.dataset.replyStatus;
+      }
+      note.focus();
+    });
+  });
+})();
+</script>
 {% endblock %}

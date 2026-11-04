@@ -23,7 +23,17 @@ from ..config import (
 )
 from ..database import get_db
 from ..filters import build_ticket_filters
-from ..models import Attachment, Category, Comment, Location, STATUSES, Ticket, TicketHistory, User
+from ..models import (
+    Attachment,
+    Category,
+    Comment,
+    Location,
+    PRIORITIES,
+    STATUSES,
+    Ticket,
+    TicketHistory,
+    User,
+)
 from ..parsing import as_int
 from ..security import (
     current_user,
@@ -158,6 +168,7 @@ def staff_list(
     request: Request,
     q: str = "",
     status: str = "",
+    priority: str = "",
     category_id: str = "",
     location_id: str = "",
     date_from: str = "",
@@ -178,6 +189,7 @@ def staff_list(
         db,
         q=q,
         status=status,
+        priority=priority,
         category_id=category_id,
         location_id=location_id,
         date_from=date_from,
@@ -211,6 +223,7 @@ def staff_list(
             "user": user,
             "tickets": tickets,
             "statuses": STATUSES,
+            "priorities": PRIORITIES,
             "categories": db.scalars(select(Category).order_by(Category.name)).all(),
             "locations": db.scalars(select(Location).order_by(Location.room)).all(),
             "filters": filters,
@@ -275,6 +288,7 @@ def staff_ticket(
             "attachments": attachments,
             "statuses": STATUSES,
             "status_options": allowed_status_options(ticket.status, user.role),
+            "priorities": PRIORITIES,
             "assignees": assignees,
             "error": error,
             "saved": saved,
@@ -291,6 +305,7 @@ def update_status(
     request: Request,
     ticket_id: int,
     status: str = Form(...),
+    priority: str = Form(""),
     assignee_id: str = Form(""),
     note: str = Form(""),
     csrf_token: str = Form(""),
@@ -316,6 +331,10 @@ def update_status(
     if status not in STATUSES:
         return _ticket_redirect(ticket_id, error="Неизвестный статус.")
 
+    priority_value = priority.strip()
+    if priority_value and priority_value not in PRIORITIES:
+        return _ticket_redirect(ticket_id, error="Неизвестный приоритет.")
+
     # Для «Решена» и «Отклонена» итоговый комментарий обязателен (раздел 7 ТЗ).
     if status in ("Решена", "Отклонена") and not note:
         return _ticket_redirect(
@@ -338,6 +357,7 @@ def update_status(
 
     old_status = ticket.status
     old_assignee = ticket.assignee_id
+    old_priority = ticket.priority
 
     # Нельзя перескакивать через этапы. Текущий статус разрешён всегда:
     # так можно изменить исполнителя или добавить заметку без смены статуса.
@@ -361,8 +381,14 @@ def update_status(
 
     ticket.status = status
     ticket.assignee_id = assignee_value
+    if priority_value:
+        ticket.priority = priority_value
 
-    if status != old_status or assignee_value != old_assignee:
+    if (
+        status != old_status
+        or assignee_value != old_assignee
+        or ticket.priority != old_priority
+    ):
         record_audit(
             db,
             actor=user,
@@ -373,6 +399,7 @@ def update_status(
             details={
                 "status": {"old": old_status, "new": status},
                 "assignee_id": {"old": old_assignee, "new": assignee_value},
+                "priority": {"old": old_priority, "new": ticket.priority},
             },
         )
 

@@ -6,6 +6,7 @@
 """
 import io
 import os
+import re
 import uuid
 from datetime import datetime
 
@@ -30,7 +31,15 @@ from ..config import (
     tracking_expiry,
 )
 from ..database import get_db
-from ..models import Attachment, Category, Comment, Location, Ticket, TicketHistory
+from ..models import (
+    Attachment,
+    Category,
+    Comment,
+    KnowledgeBase,
+    Location,
+    Ticket,
+    TicketHistory,
+)
 from ..parsing import as_int
 from ..ratelimit import client_ip, is_limited, register_event
 from ..security import hash_token, new_tracking_token, verify_csrf
@@ -42,6 +51,8 @@ ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
 SUFFIX_BY_TYPE = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 МБ
 UPLOAD_CHUNK_SIZE = 64 * 1024
+PHONE_RE = re.compile(r"^[0-9+()\-\s]{5,40}$")
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 # Pillow не должен пытаться декодировать изображения-«бомбы».
 Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
@@ -50,6 +61,20 @@ Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 def _upload_dir_size() -> int:
     """Суммарный размер всех вложений на диске."""
     return sum(path.stat().st_size for path in UPLOAD_DIR.glob("*") if path.is_file())
+
+
+def _clean_contacts(phone: str, email: str) -> tuple[str, str, str]:
+    """Проверяет необязательные контакты заявителя."""
+    phone = (phone or "").strip()
+    email = (email or "").strip()
+    if phone and not PHONE_RE.fullmatch(phone):
+        return phone, email, (
+            "Телефон указан в неверном формате. Используйте цифры, пробелы, "
+            "скобки, дефис и знак «+»."
+        )
+    if email and (len(email) > 120 or not EMAIL_RE.fullmatch(email)):
+        return phone, email, "Email указан в неверном формате."
+    return phone, email, ""
 
 
 async def _read_upload_limited(upload: UploadFile, limit: int) -> bytes | None:
@@ -79,6 +104,8 @@ def _report_context(
     qr_error: str = "",
     error: str = "",
     description: str = "",
+    contact_phone: str = "",
+    contact_email: str = "",
     selected_location_id: int | None = None,
     selected_category_id: int | None = None,
 ):
@@ -92,6 +119,8 @@ def _report_context(
         "qr_error": qr_error,
         "error": error,
         "description": description,
+        "contact_phone": contact_phone,
+        "contact_email": contact_email,
         "selected_location_id": selected_location_id,
         "selected_category_id": selected_category_id,
         "max_description_length": MAX_DESCRIPTION_LENGTH,
@@ -127,6 +156,8 @@ def _form_error(
     *,
     status_code: int = 400,
     description: str = "",
+    contact_phone: str = "",
+    contact_email: str = "",
     location: Location | None = None,
     category: Category | None = None,
 ):
@@ -138,6 +169,8 @@ def _form_error(
             db,
             error=message,
             description=description,
+            contact_phone=contact_phone,
+            contact_email=contact_email,
             selected_location_id=location.id if location else None,
             selected_category_id=category.id if category else None,
         ),
@@ -160,6 +193,8 @@ async def create_ticket(
     description: str = Form(...),
     location_id: str = Form(""),
     category_id: str = Form(""),
+    contact_phone: str = Form(""),
+    contact_email: str = Form(""),
     csrf_token: str = Form(""),
     website: str = Form(""),
     photo: UploadFile | None = File(None),
@@ -167,6 +202,9 @@ async def create_ticket(
 ):
     """Сохраняет заявку в базу и показывает номер + ссылку отслеживания."""
     description = description.strip()
+    contact_phone, contact_email, contact_error = _clean_contacts(
+        contact_phone, contact_email
+    )
     location_pk = as_int(location_id)
     category_pk = as_int(category_id)
     location = db.get(Location, location_pk) if location_pk is not None else None
@@ -179,6 +217,8 @@ async def create_ticket(
             message,
             status_code=status_code,
             description=description,
+            contact_phone=contact_phone,
+            contact_email=contact_email,
             location=location,
             category=category,
         )
@@ -210,6 +250,9 @@ async def create_ticket(
         return form_error(
             f"Описание слишком длинное — максимум {MAX_DESCRIPTION_LENGTH} символов."
         )
+
+    if contact_error:
+        return form_error(contact_error)
 
     if location is None:
         return form_error("Выберите этаж или территорию и помещение, где произошла проблема.")
@@ -251,6 +294,8 @@ async def create_ticket(
         description=description,
         category_id=category.id if category else None,
         location_id=location.id,
+        contact_phone=contact_phone,
+        contact_email=contact_email,
         status="Новая",
         tracking_token_hash=hash_token(token),
         tracking_expires_at=tracking_expiry(),
@@ -391,6 +436,22 @@ def _render_track(request: Request, db: Session, ticket: Ticket, token: str):
             "attachments": attachments,
             "token": token,
         },
+    )
+
+
+@router.get("/faq", response_class=HTMLResponse)
+def faq(request: Request, db: Session = Depends(get_db)):
+    """Публичная страница частых вопросов из базы знаний помощника."""
+    entries = db.scalars(
+        select(KnowledgeBase).order_by(KnowledgeBase.category, KnowledgeBase.question)
+    ).all()
+    groups: dict[str, list[KnowledgeBase]] = {}
+    for entry in entries:
+        groups.setdefault(entry.category or "Прочее", []).append(entry)
+    return templates.TemplateResponse(
+        request=request,
+        name="faq.html",
+        context={"groups": groups},
     )
 
 

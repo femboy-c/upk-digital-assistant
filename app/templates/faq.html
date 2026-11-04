@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Частые вопросы — Колледж ДГУ{% endblock %}
+
+{% block content %}
+<div class="row-between">
+  <div>
+    <h1>Частые вопросы</h1>
+    <p class="lead">
+      Проверенные инструкции колледжа. Если ответа нет — опишите проблему в форме
+      заявки или спросите ИИ-помощника.
+    </p>
+  </div>
+  <div class="header-actions">
+    <a class="btn btn-ghost" href="/">Сообщить о проблеме</a>
+    <a class="btn btn-ghost" href="/track">Проверить заявку</a>
+  </div>
+</div>
+
+{% for category, entries in groups.items() %}
+  <section class="card faq-group">
+    <h2>{{ category }}</h2>
+    {% for entry in entries %}
+      <details class="faq-item">
+        <summary>{{ entry.question }}</summary>
+        <div class="faq-answer">{{ entry.answer }}</div>
+        {% if entry.source %}<p class="hint">Источник: {{ entry.source }}</p>{% endif %}
+      </details>
+    {% endfor %}
+  </section>
+{% else %}
+  <div class="card center">
+    <h2>База знаний пока пуста</h2>
+    <p class="muted">Опишите проблему в форме заявки — сотрудник колледжа поможет.</p>
+    <a class="btn btn-primary" href="/">Открыть форму</a>
+  </div>
+{% endfor %}
+{% endblock %}

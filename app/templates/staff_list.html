@@ -35,6 +35,13 @@
     {% endfor %}
   </select>
 
+  <select name="priority">
+    <option value="">Все приоритеты</option>
+    {% for p in priorities %}
+      <option value="{{ p }}" {% if filters.priority == p %}selected{% endif %}>{{ p }}</option>
+    {% endfor %}
+  </select>
+
   <select name="category_id">
     <option value="">Все категории</option>
     {% for c in categories %}
@@ -67,7 +74,7 @@
   <thead>
     <tr>
       <th>Номер</th><th>Дата</th><th>Кратко</th><th>Место</th>
-      <th>Категория</th><th>Исполнитель</th><th>Статус</th>
+      <th>Категория</th><th>Приоритет</th><th>Исполнитель</th><th>Статус</th>
     </tr>
   </thead>
   <tbody>
@@ -78,6 +85,7 @@
       <td data-label="Кратко">{{ t.title }}</td>
       <td data-label="Место">{{ t.location.title if t.location else "—" }}</td>
       <td data-label="Категория">{{ t.category.name if t.category else "—" }}</td>
+      <td data-label="Приоритет"><span class="badge" data-priority="{{ t.priority }}">{{ t.priority }}</span></td>
       <td data-label="Исполнитель">{{ t.assignee.name if t.assignee else "—" }}</td>
       <td data-label="Статус"><span class="badge" data-status="{{ t.status }}">{{ t.status }}</span></td>
     </tr>

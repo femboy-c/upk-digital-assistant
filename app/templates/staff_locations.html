@@ -9,9 +9,12 @@
     <h1>Помещения и QR-коды</h1>
     <p class="muted">Привязка QR-кода к этажу/территории и кабинету.</p>
   </div>
-  {% if user.role == "admin" %}
-    <a class="btn btn-primary" href="/staff/locations/new">Добавить помещение</a>
-  {% endif %}
+  <div class="header-actions">
+    <a class="btn btn-ghost" href="/staff/locations/print">Печать QR-табличек</a>
+    {% if user.role == "admin" %}
+      <a class="btn btn-primary" href="/staff/locations/new">Добавить помещение</a>
+    {% endif %}
+  </div>
 </div>
 
 {% if saved %}

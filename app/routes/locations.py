@@ -124,6 +124,29 @@ def locations_list(request: Request, error: str = "", saved: str = "", db: Sessi
     )
 
 
+@router.get("/staff/locations/print", response_class=HTMLResponse)
+def locations_print(request: Request, db: Session = Depends(get_db)):
+    """Печатная страница с QR-табличками для помещений."""
+    user, denial = require_roles(request, db, ("staff", "admin"))
+    if denial:
+        return denial
+
+    locations = db.scalars(
+        select(Location).order_by(Location.floor, Location.room, Location.zone_name)
+    ).all()
+    base = public_base_url(request)
+    return templates.TemplateResponse(
+        request=request,
+        name="staff_locations_print.html",
+        context={
+            "user": user,
+            "locations": locations,
+            "base_url": base,
+            "qr_urls": {loc.id: f"{base}/?qr={quote(loc.qr_key)}" for loc in locations},
+        },
+    )
+
+
 @router.get("/staff/locations/new", response_class=HTMLResponse)
 def new_location_page(request: Request, db: Session = Depends(get_db)):
     user, denial = require_roles(request, db, ("admin",))

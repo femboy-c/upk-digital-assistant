@@ -43,3 +43,11 @@ def ensure_schema(target_engine: Engine | None = None) -> None:
             connection.exec_driver_sql(
                 "ALTER TABLE tickets ADD COLUMN tracking_revoked_at DATETIME"
             )
+        if "contact_phone" not in ticket_columns:
+            connection.exec_driver_sql(
+                "ALTER TABLE tickets ADD COLUMN contact_phone VARCHAR(40) DEFAULT ''"
+            )
+        if "contact_email" not in ticket_columns:
+            connection.exec_driver_sql(
+                "ALTER TABLE tickets ADD COLUMN contact_email VARCHAR(120) DEFAULT ''"
+            )

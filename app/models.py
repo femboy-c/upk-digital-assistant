@@ -24,6 +24,9 @@ STATUSES = [
     "Отклонена",
 ]
 
+# Приоритеты заявки. Поле priority уже было в схеме, теперь используется в UI.
+PRIORITIES = ["Низкий", "Обычный", "Высокий", "Срочный"]
+
 
 class User(Base):
     """Пользователи: заявители, сотрудники колледжа, администраторы."""
@@ -95,6 +98,9 @@ class Ticket(Base):
     status: Mapped[str] = mapped_column(String(40), default="Новая", index=True)
     priority: Mapped[str] = mapped_column(String(20), default="Обычный")
     assignee_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    # Необязательные контакты заявителя для уточнения деталей.
+    contact_phone: Mapped[str] = mapped_column(String(40), default="")
+    contact_email: Mapped[str] = mapped_column(String(120), default="")
     tracking_token_hash: Mapped[str] = mapped_column(String(64), index=True)
     # Срок жизни ссылки и отметка об отзыве. None = бессрочно / не отозвана.
     tracking_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

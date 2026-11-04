@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Печать QR-табличек — панель колледжа{% endblock %}
+
+{% block content %}
+<div class="row-between no-print">
+  <div>
+    <a class="back" href="/staff/locations">← К помещениям и QR</a>
+    <h1>Печать QR-табличек</h1>
+    <p class="muted">Распечатайте и закрепите рядом с помещением. QR ведёт на форму заявки.</p>
+  </div>
+  <button class="btn btn-primary" type="button" onclick="window.print()">Печать</button>
+</div>
+
+<div class="qr-print-grid">
+  {% for loc in locations %}
+  <article class="qr-print-card">
+    <div class="qr-print-mark">ДГУ</div>
+    <h2>{{ loc.title }}</h2>
+    <p class="qr-print-place">{{ loc.floor_label }}{% if loc.room %} · кабинет {{ loc.room }}{% endif %}</p>
+    <img src="/qr/{{ loc.qr_key }}.png" alt="QR-код помещения {{ loc.title }}" width="220" height="220">
+    <p class="qr-print-text">Сообщите о проблеме</p>
+    <p class="qr-print-hint">Наведите камеру телефона на QR-код</p>
+    <p class="qr-print-url">{{ qr_urls[loc.id] }}</p>
+  </article>
+  {% endfor %}
+</div>
+{% endblock %}

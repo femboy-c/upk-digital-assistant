@@ -48,6 +48,8 @@ def test_old_database_gets_new_columns_without_losing_data():
     assert {
         "tracking_expires_at",
         "tracking_revoked_at",
+        "contact_phone",
+        "contact_email",
     } <= _columns(engine, "tickets")
 
     with engine.connect() as connection:

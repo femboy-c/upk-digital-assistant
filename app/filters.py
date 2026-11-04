@@ -9,7 +9,7 @@ from datetime import date, datetime, time
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from .models import Category, Location, STATUSES, Ticket
+from .models import Category, Location, PRIORITIES, STATUSES, Ticket
 from .parsing import as_int
 
 
@@ -28,6 +28,7 @@ def build_ticket_filters(
     *,
     q: str = "",
     status: str = "",
+    priority: str = "",
     category_id: str = "",
     location_id: str = "",
     date_from: str = "",
@@ -42,6 +43,7 @@ def build_ticket_filters(
     clean = {
         "q": (q or "").strip(),
         "status": "",
+        "priority": "",
         "category_id": "",
         "location_id": "",
         "date_from": "",
@@ -65,6 +67,14 @@ def build_ticket_filters(
             conditions.append(Ticket.status == status_filter)
         else:
             errors.append("Неизвестный статус — фильтр сброшен.")
+
+    priority_filter = (priority or "").strip()
+    if priority_filter:
+        if priority_filter in PRIORITIES:
+            clean["priority"] = priority_filter
+            conditions.append(Ticket.priority == priority_filter)
+        else:
+            errors.append("Неизвестный приоритет — фильтр сброшен.")
 
     category_pk = as_int(category_id)
     if category_id:

@@ -649,3 +649,67 @@ code { background: #eef2fb; padding: 2px 6px; border-radius: 6px; font-size: 13p
 :root[data-theme="dark"] .account-avatar {
   background: linear-gradient(135deg, #2457e6, #4d7cf0);
 }
+
+/* Быстрые ответы и приоритеты */
+.reply-templates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 12px;
+}
+.reply-templates .btn {
+  margin-top: 0;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.badge[data-priority="Низкий"] { background: #eef2f7; color: #667085; }
+.badge[data-priority="Обычный"] { background: #eef2fb; color: #2457e6; }
+.badge[data-priority="Высокий"] { background: #fff4e5; color: #a15c00; }
+.badge[data-priority="Срочный"] { background: #feecec; color: #b42318; }
+:root[data-theme="dark"] .badge[data-priority="Низкий"] { background: rgba(148, 163, 184, .16); color: #cbd5e1; }
+:root[data-theme="dark"] .badge[data-priority="Обычный"] { background: rgba(36, 87, 230, .24); color: #a9c1ff; }
+:root[data-theme="dark"] .badge[data-priority="Высокий"] { background: rgba(245, 158, 11, .16); color: #fcd34d; }
+:root[data-theme="dark"] .badge[data-priority="Срочный"] { background: rgba(239, 68, 68, .18); color: #fca5a5; }
+
+/* Частые вопросы */
+.faq-group { margin-bottom: 14px; }
+.faq-item { border-top: 1px solid var(--line); padding: 12px 0; }
+.faq-item:first-of-type { border-top: 0; }
+.faq-item summary { cursor: pointer; font-weight: 650; }
+.faq-answer { white-space: pre-line; margin-top: 10px; color: var(--text); }
+
+/* Печатные QR-таблички */
+.qr-print-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.qr-print-card {
+  background: #fff;
+  color: #172033;
+  border: 1px dashed #9aa7bd;
+  border-radius: 14px;
+  padding: 18px;
+  text-align: center;
+  break-inside: avoid;
+}
+.qr-print-mark {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  color: #2457e6;
+}
+.qr-print-card h2 { margin: 6px 0 2px; font-size: 20px; }
+.qr-print-place { margin: 0 0 8px; color: #667085; font-size: 13px; }
+.qr-print-card img { display: block; margin: 0 auto; image-rendering: pixelated; }
+.qr-print-text { margin: 8px 0 2px; font-weight: 700; }
+.qr-print-hint { margin: 0; color: #667085; font-size: 12px; }
+.qr-print-url { margin: 6px 0 0; color: #8a94a6; font-size: 10px; word-break: break-all; }
+
+@media print {
+  .topbar, .footer, .no-print, .skip-link { display: none !important; }
+  body { background: #fff !important; }
+  .wrap { max-width: none; padding: 0; }
+  .qr-print-grid { grid-template-columns: repeat(2, 1fr); gap: 10mm; }
+  .qr-print-card { border: 1px dashed #777; page-break-inside: avoid; }
+}
