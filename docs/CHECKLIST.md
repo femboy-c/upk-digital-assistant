@@ -4,8 +4,8 @@
 
 - [ ] Установлены зависимости: `.venv/bin/pip install -r requirements.txt`
 - [ ] Для тестов установлены: `.venv/bin/pip install -r requirements-dev.txt`
-- [ ] Запущен сервер: `.venv/bin/uvicorn app.main:app --reload --port 8000`
-- [ ] Открывается http://127.0.0.1:8000
+- [ ] Запущен сервер: `.venv/bin/uvicorn app.main:app --reload --port 8443 --ssl-keyfile data/certs/upk.key --ssl-certfile data/certs/upk-chain.crt`
+- [ ] Открывается https://127.0.0.1:8443
 - [ ] Проходят тесты: `.venv/bin/pytest -q` → 60 passed
 
 ## Компьютер
@@ -32,7 +32,7 @@
 
 ## Смартфон
 
-- [ ] В `.env` задан `PUBLIC_BASE_URL=http://IP-компьютера:8000`.
+- [ ] В `.env` задан `PUBLIC_BASE_URL=https://IP-компьютера:8443`.
 - [ ] Сервер запущен с `--host 0.0.0.0`.
 - [ ] Телефон и компьютер в одной сети.
 - [ ] QR считывается камерой и открывает форму.

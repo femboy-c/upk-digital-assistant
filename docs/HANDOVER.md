@@ -8,12 +8,12 @@
 - **Назначение:** заявки о проблемах в помещениях и на территории колледжа через QR-код.
 - **Путь:** `/home/mamai/upk`.
 - **Стек:** Python 3.15.2, FastAPI, SQLite, SQLAlchemy, Jinja2, qrcode, Pillow.
-- **Репозитория Git нет** — проект лежит обычной папкой.
+- **GitHub:** приватный репозиторий `femboy-c/upk-digital-assistant`, ветка `main`.
 - **Тесты:** `113 passed`.
-- **Сервер сейчас запущен:** `0.0.0.0:8000`.
+- **Сервер сейчас запущен:** HTTPS на `0.0.0.0:8443` (локальный CA).
 - **Адреса:**
-  - компьютер: `http://127.0.0.1:8000`
-  - локальная сеть: `http://10.167.225.109:8000`
+  - компьютер: `https://127.0.0.1:8443`
+  - локальная сеть: `https://10.167.225.109:8443`
   - проверка: `/health`
 
 Основной сценарий:
@@ -24,13 +24,21 @@
 
 ```bash
 cd /home/mamai/upk
-.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8443 \
+  --ssl-keyfile data/certs/upk.key \
+  --ssl-certfile data/certs/upk-chain.crt
+```
+
+Если сертификаты потеряны или сменился IP:
+
+```bash
+scripts/create_local_cert.sh 10.167.225.109
 ```
 
 Если порт занят:
 
 ```bash
-fuser -k 8000/tcp
+fuser -k 8443/tcp
 ```
 
 Не использовать `pkill -f "uvicorn app.main:app"` — можно убить свою оболочку.
@@ -111,7 +119,7 @@ cd /home/mamai/upk
 ├── docs/                    документация и эта передача
 ├── docs/qr/                 готовые PNG QR, index.html, qr-codes.csv
 ├── deploy/                  примеры Caddy и systemd
-├── scripts/                 QR, пользователи, бэкапы
+├── scripts/                 QR, пользователи, бэкапы, сертификаты, очистка
 ├── tests/                   pytest
 ├── backups/                 ZIP-архивы базы и вложений
 ├── .env                     локальные настройки, не передавать публично
@@ -300,7 +308,7 @@ cd /home/mamai/upk
 Проверить, что реально отдаёт сервер:
 
 ```bash
-curl -s 'http://127.0.0.1:8000/?qr=room214' | grep -A20 '<select id="floor">'
+curl -s 'https://127.0.0.1:8443/?qr=room214' | grep -A20 '<select id="floor">'
 ```
 
 ## 9. Тесты
@@ -393,7 +401,8 @@ curl -s 'http://127.0.0.1:8000/?qr=room214' | grep -A20 '<select id="floor">'
 - Перед изменениями схемы или данных запускать `scripts/backup.py`.
 - Не менять `SECRET_KEY` без необходимости — все сессии сбросятся.
 - Не запускать тесты на реальной базе: они используют временную БД.
-- Не публиковать порт 8000 напрямую в интернет.
+- Не публиковать uvicorn-порт (8000/8443) напрямую в интернет без HTTPS-прокси
+  и ограничения доступа.
 - Не использовать `pkill -f "uvicorn app.main:app"`.
 - Не размещать API-ключи в браузерном коде.
 - После правок в `.py` перезапускать uvicorn.
@@ -416,11 +425,12 @@ curl -s 'http://127.0.0.1:8000/?qr=room214' | grep -A20 '<select id="floor">'
 
 Путь: /home/mamai/upk
 Стек: Python 3.15.2, FastAPI, SQLite, SQLAlchemy, Jinja2, qrcode, Pillow.
-Запуск: cd /home/mamai/upk && .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+Запуск: cd /home/mamai/upk && .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8443 --ssl-keyfile data/certs/upk.key --ssl-certfile data/certs/upk-chain.crt
 Проверка: .venv/bin/pytest -q (сейчас 113 passed)
 Демо-доступ: staff/staff123, admin/admin123. Перед публичным запуском сменить.
-Сервер сейчас работает на 0.0.0.0:8000, локально http://127.0.0.1:8000,
-в сети http://10.167.225.109:8000.
+Сервер сейчас работает по HTTPS на 0.0.0.0:8443, локально https://127.0.0.1:8443,
+в сети https://10.167.225.109:8443. Сертификаты: data/certs/, CA для телефона:
+data/certs/upk-ca.crt. HTTP-порт 8000 закрыт.
 
 Сначала прочитай docs/HANDOVER.md — там полное состояние проекта,
 база, каталог мест, правила и список ограничений.
@@ -457,7 +467,7 @@ curl -s 'http://127.0.0.1:8000/?qr=room214' | grep -A20 '<select id="floor">'
 Нельзя:
 - коммитить .env, data/, data/uploads/, backups/;
 - удалять data/upk.db без бэкапа;
-- публиковать порт 8000 наружу;
+- публиковать uvicorn-порт 8000/8443 наружу без HTTPS-прокси и файрвола;
 - менять SECRET_KEY без предупреждения;
 - запускать тесты на реальной базе;
 - использовать pkill -f "uvicorn app.main:app".
@@ -484,7 +494,7 @@ cd /home/mamai/upk
 Проверить сервер:
 
 ```bash
-curl -s http://127.0.0.1:8000/health
+curl -s https://127.0.0.1:8443/health
 ```
 
 Ожидается:
