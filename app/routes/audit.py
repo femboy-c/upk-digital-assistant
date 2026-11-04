@@ -25,6 +25,7 @@ ACTION_LABELS = {
     "user.delete": "Удаление пользователя",
     "ticket.status": "Изменение статуса заявки",
     "ticket.delete": "Удаление заявки",
+    "ticket.retention_delete": "Удаление по сроку хранения",
     "tracking.revoke": "Отзыв ссылки отслеживания",
     "tracking.restore": "Восстановление ссылки",
     "tracking.extend": "Продление ссылки",

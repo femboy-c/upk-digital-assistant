@@ -85,6 +85,11 @@ def csrf_protection_enabled() -> bool:
     return os.getenv("UPK_DISABLE_CSRF", "0").lower() not in ("1", "true", "yes")
 
 
+def consent_required() -> bool:
+    """Согласие на обработку ПДн можно отключить только в автотестах."""
+    return os.getenv("UPK_DISABLE_CONSENT", "0").lower() not in ("1", "true", "yes")
+
+
 def get_csrf_token(request: Request) -> str:
     """Возвращает токен формы из сессии, создавая его при необходимости."""
     if not csrf_protection_enabled():

@@ -126,6 +126,15 @@
   <label for="photo">Фотография (необязательно, до 5 МБ)</label>
   <input id="photo" type="file" name="photo" accept="image/jpeg,image/png,image/webp">
 
+  <label class="checkbox-row consent-row" for="personal_data_consent">
+    <input id="personal_data_consent" name="personal_data_consent" type="checkbox"
+           value="1" required {% if consent_checked %}checked{% endif %}>
+    <span>
+      Я согласен на обработку персональных данных в соответствии с
+      <a href="/privacy" target="_blank" rel="noopener">политикой</a>.
+    </span>
+  </label>
+
   <button class="btn btn-primary" type="submit">Отправить заявку</button>
   <p class="hint">После отправки вы получите номер заявки и ссылку для отслеживания статуса.</p>
 </form>

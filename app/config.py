@@ -75,6 +75,16 @@ try:
 except ValueError:
     TRACKING_LINK_TTL_DAYS = 90
 
+# Политика обработки персональных данных.
+PRIVACY_POLICY_VERSION = os.getenv("PRIVACY_POLICY_VERSION", "2026-11-05").strip()
+PRIVACY_CONTACT_EMAIL = os.getenv("PRIVACY_CONTACT_EMAIL", "").strip()
+
+# Сколько дней хранить закрытые заявки и контакты заявителей.
+try:
+    TICKET_RETENTION_DAYS = max(1, int(os.getenv("TICKET_RETENTION_DAYS", "365")))
+except ValueError:
+    TICKET_RETENTION_DAYS = 365
+
 
 def tracking_expiry(now: datetime | None = None) -> datetime | None:
     """Дата окончания действия ссылки отслеживания для новой заявки."""

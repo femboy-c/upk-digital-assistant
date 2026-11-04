@@ -50,6 +50,8 @@ def test_old_database_gets_new_columns_without_losing_data():
         "tracking_revoked_at",
         "contact_phone",
         "contact_email",
+        "consent_at",
+        "consent_version",
     } <= _columns(engine, "tickets")
 
     with engine.connect() as connection:

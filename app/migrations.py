@@ -51,3 +51,11 @@ def ensure_schema(target_engine: Engine | None = None) -> None:
             connection.exec_driver_sql(
                 "ALTER TABLE tickets ADD COLUMN contact_email VARCHAR(120) DEFAULT ''"
             )
+        if "consent_at" not in ticket_columns:
+            connection.exec_driver_sql(
+                "ALTER TABLE tickets ADD COLUMN consent_at DATETIME"
+            )
+        if "consent_version" not in ticket_columns:
+            connection.exec_driver_sql(
+                "ALTER TABLE tickets ADD COLUMN consent_version VARCHAR(20) DEFAULT ''"
+            )

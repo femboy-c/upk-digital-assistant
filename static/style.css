@@ -713,3 +713,7 @@ code { background: #eef2fb; padding: 2px 6px; border-radius: 6px; font-size: 13p
   .qr-print-grid { grid-template-columns: repeat(2, 1fr); gap: 10mm; }
   .qr-print-card { border: 1px dashed #777; page-break-inside: avoid; }
 }
+
+/* Согласие на обработку персональных данных */
+.consent-row { align-items: flex-start; font-weight: 500; line-height: 1.45; }
+.consent-row input { margin-top: 3px; }

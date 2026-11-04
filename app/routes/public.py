@@ -24,7 +24,10 @@ from ..config import (
     MAX_IMAGE_PIXELS,
     MAX_UPLOAD_TOTAL_BYTES,
     MIN_DESCRIPTION_LENGTH,
+    PRIVACY_CONTACT_EMAIL,
+    PRIVACY_POLICY_VERSION,
     TICKETS_RATE_LIMIT,
+    TICKET_RETENTION_DAYS,
     TICKETS_RATE_WINDOW_SECONDS,
     UPLOAD_DIR,
     qr_target_url,
@@ -42,7 +45,7 @@ from ..models import (
 )
 from ..parsing import as_int
 from ..ratelimit import client_ip, is_limited, register_event
-from ..security import hash_token, new_tracking_token, verify_csrf
+from ..security import consent_required, hash_token, new_tracking_token, verify_csrf
 from ..templating import templates
 
 router = APIRouter()
@@ -106,6 +109,7 @@ def _report_context(
     description: str = "",
     contact_phone: str = "",
     contact_email: str = "",
+    consent_checked: bool = False,
     selected_location_id: int | None = None,
     selected_category_id: int | None = None,
 ):
@@ -121,6 +125,7 @@ def _report_context(
         "description": description,
         "contact_phone": contact_phone,
         "contact_email": contact_email,
+        "consent_checked": consent_checked,
         "selected_location_id": selected_location_id,
         "selected_category_id": selected_category_id,
         "max_description_length": MAX_DESCRIPTION_LENGTH,
@@ -158,6 +163,7 @@ def _form_error(
     description: str = "",
     contact_phone: str = "",
     contact_email: str = "",
+    consent_checked: bool = False,
     location: Location | None = None,
     category: Category | None = None,
 ):
@@ -171,6 +177,7 @@ def _form_error(
             description=description,
             contact_phone=contact_phone,
             contact_email=contact_email,
+            consent_checked=consent_checked,
             selected_location_id=location.id if location else None,
             selected_category_id=category.id if category else None,
         ),
@@ -195,6 +202,7 @@ async def create_ticket(
     category_id: str = Form(""),
     contact_phone: str = Form(""),
     contact_email: str = Form(""),
+    personal_data_consent: str = Form(""),
     csrf_token: str = Form(""),
     website: str = Form(""),
     photo: UploadFile | None = File(None),
@@ -202,6 +210,7 @@ async def create_ticket(
 ):
     """Сохраняет заявку в базу и показывает номер + ссылку отслеживания."""
     description = description.strip()
+    consent_checked = personal_data_consent.strip().lower() in ("1", "on", "true", "yes")
     contact_phone, contact_email, contact_error = _clean_contacts(
         contact_phone, contact_email
     )
@@ -219,6 +228,7 @@ async def create_ticket(
             description=description,
             contact_phone=contact_phone,
             contact_email=contact_email,
+            consent_checked=consent_checked,
             location=location,
             category=category,
         )
@@ -241,6 +251,11 @@ async def create_ticket(
         )
 
     # 4. Проверка полей.
+    if consent_required() and not consent_checked:
+        return form_error(
+            "Чтобы отправить заявку, нужно согласие на обработку персональных данных."
+        )
+
     if len(description) < MIN_DESCRIPTION_LENGTH:
         return form_error(
             f"Опишите проблему подробнее — минимум {MIN_DESCRIPTION_LENGTH} символов."
@@ -296,6 +311,8 @@ async def create_ticket(
         location_id=location.id,
         contact_phone=contact_phone,
         contact_email=contact_email,
+        consent_at=datetime.now() if consent_checked else None,
+        consent_version=PRIVACY_POLICY_VERSION if consent_checked else "",
         status="Новая",
         tracking_token_hash=hash_token(token),
         tracking_expires_at=tracking_expiry(),
@@ -435,6 +452,20 @@ def _render_track(request: Request, db: Session, ticket: Ticket, token: str):
             "history": history,
             "attachments": attachments,
             "token": token,
+        },
+    )
+
+
+@router.get("/privacy", response_class=HTMLResponse)
+def privacy(request: Request):
+    """Политика обработки персональных данных."""
+    return templates.TemplateResponse(
+        request=request,
+        name="privacy.html",
+        context={
+            "policy_version": PRIVACY_POLICY_VERSION,
+            "retention_days": TICKET_RETENTION_DAYS,
+            "privacy_contact_email": PRIVACY_CONTACT_EMAIL,
         },
     )
 

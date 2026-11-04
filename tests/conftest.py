@@ -7,5 +7,6 @@ os.environ.setdefault("UPK_DB_PATH", os.path.join(tempfile.mkdtemp(prefix="upk-t
 os.environ.setdefault("UPK_UPLOAD_DIR", tempfile.mkdtemp(prefix="upk-uploads-"))
 os.environ.setdefault("UPK_DISABLE_CSRF", "1")
 os.environ.setdefault("UPK_DISABLE_RATE_LIMIT", "1")
+os.environ.setdefault("UPK_DISABLE_CONSENT", "1")
 os.environ.setdefault("SECRET_KEY", "test-secret")
 os.environ.setdefault("PUBLIC_BASE_URL", "http://upk.test")

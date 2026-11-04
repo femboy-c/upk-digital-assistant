@@ -34,6 +34,13 @@
         <a href="mailto:{{ ticket.contact_email }}">{{ ticket.contact_email }}</a>
       {% else %}—{% endif %}
     </dd>
+    <dt>Согласие на ПДн</dt>
+    <dd>
+      {% if ticket.consent_at %}
+        {{ ticket.consent_at.strftime("%d.%m.%Y %H:%M") }}
+        {% if ticket.consent_version %}<span class="muted">· версия {{ ticket.consent_version }}</span>{% endif %}
+      {% else %}—{% endif %}
+    </dd>
   </dl>
 
   {% if attachments %}

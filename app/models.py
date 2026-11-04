@@ -101,6 +101,9 @@ class Ticket(Base):
     # Необязательные контакты заявителя для уточнения деталей.
     contact_phone: Mapped[str] = mapped_column(String(40), default="")
     contact_email: Mapped[str] = mapped_column(String(120), default="")
+    # Согласие на обработку персональных данных: когда и по какой версии.
+    consent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    consent_version: Mapped[str] = mapped_column(String(20), default="")
     tracking_token_hash: Mapped[str] = mapped_column(String(64), index=True)
     # Срок жизни ссылки и отметка об отзыве. None = бессрочно / не отозвана.
     tracking_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
