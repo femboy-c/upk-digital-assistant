@@ -10,3 +10,5 @@ os.environ.setdefault("UPK_DISABLE_RATE_LIMIT", "1")
 os.environ.setdefault("UPK_DISABLE_CONSENT", "1")
 os.environ.setdefault("SECRET_KEY", "test-secret")
 os.environ.setdefault("PUBLIC_BASE_URL", "http://upk.test")
+# Тестовый клиент ходит по HTTP, поэтому Secure-cookie из .env отключаем.
+os.environ.setdefault("SESSION_HTTPS_ONLY", "0")
