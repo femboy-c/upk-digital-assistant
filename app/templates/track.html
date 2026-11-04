@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Статус заявки {{ ticket.public_number }} — Колледж ДГУ{% endblock %}
+
+{% block content %}
+<a class="back" href="/">← На главную</a>
+
+<div class="card">
+  <div class="row-between">
+    <h1 class="mono">{{ ticket.public_number }}</h1>
+    <span class="badge" data-status="{{ ticket.status }}">{{ ticket.status }}</span>
+  </div>
+
+  <p class="muted">Создана {{ ticket.created_at.strftime("%d.%m.%Y в %H:%M") }}
+    {% if ticket.tracking_expires_at %}
+      · ссылка действует до {{ ticket.tracking_expires_at.strftime("%d.%m.%Y") }}
+    {% endif %}
+  </p>
+
+  <dl class="details">
+    <dt>Описание</dt><dd>{{ ticket.description }}</dd>
+    <dt>Место</dt><dd>{{ ticket.location.title if ticket.location else "—" }}</dd>
+    <dt>Категория</dt><dd>{{ ticket.category.name if ticket.category else "—" }}</dd>
+    <dt>Исполнитель</dt><dd>{{ ticket.assignee.name if ticket.assignee else "пока не назначен" }}</dd>
+  </dl>
+
+  {% if attachments %}
+    <h2 class="section-title">Фотографии</h2>
+    <ul class="attachments">
+      {% for a in attachments %}
+        <li>
+          <a href="/t/{{ token }}/attachment/{{ a.id }}" target="_blank" rel="noopener">
+            Фото {{ loop.index }}
+          </a>
+          <span class="muted">{{ a.created_at.strftime("%d.%m.%Y %H:%M") }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Комментарии сотрудника</h2>
+  {% for c in comments %}
+    <div class="comment">
+      <p>{{ c.body }}</p>
+      <span class="muted">{{ c.created_at.strftime("%d.%m.%Y %H:%M") }}</span>
+    </div>
+  {% else %}
+    <p class="muted">Пока комментариев нет.</p>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2>История статусов</h2>
+  <ul class="timeline">
+    {% for h in history %}
+      <li>
+        <strong>{{ h.new_status }}</strong>
+        <span class="muted">— {{ h.created_at.strftime("%d.%m.%Y %H:%M") }}</span>
+        {% if h.note %}<div class="muted">{{ h.note }}</div>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

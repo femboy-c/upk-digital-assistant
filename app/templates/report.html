@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+{% block title %}Сообщить о проблеме — Колледж ДГУ{% endblock %}
+
+{% block content %}
+<h1>Сообщить о проблеме</h1>
+<p class="lead">Цифровой помощник Колледжа ДГУ. Опишите, что случилось, — мы зарегистрируем заявку и передадим её сотруднику колледжа.</p>
+
+{% if qr_error %}
+  <div class="alert alert-warn">{{ qr_error }}</div>
+{% endif %}
+
+{% if preselected %}
+  <div class="alert alert-info">
+    QR-код распознан. Место: <strong>{{ preselected.title }}</strong>
+  </div>
+{% endif %}
+
+{% if error %}
+  <div class="alert alert-error">{{ error }}</div>
+{% endif %}
+
+<section class="card assistant" id="assistant">
+  <div class="row-between">
+    <h2>Помощник перед отправкой</h2>
+    <span class="badge">демонстрация</span>
+  </div>
+  <p class="hint">
+    Проверьте описание до отправки: помощник отличит типовой вопрос, неисправность,
+    опасную ситуацию или скажет, что данных недостаточно.
+    Это демонстрационная имитация ИИ: ответы строятся по правилам и базе знаний колледжа.
+  </p>
+  <button type="button" class="btn btn-ghost" id="assistant-check">Проверить текст</button>
+
+  <div id="assistant-result" class="assistant-result" hidden>
+    <div class="row-between">
+      <strong id="assistant-kind"></strong>
+      <span id="assistant-source" class="muted"></span>
+    </div>
+    <p id="assistant-answer" class="assistant-answer"></p>
+    <p id="assistant-question" class="alert alert-warn" hidden></p>
+    <p id="assistant-category" class="hint" hidden></p>
+    <div class="assistant-actions" id="assistant-actions" hidden>
+      <button type="button" class="btn btn-ghost" id="assistant-use-draft">Вставить черновик</button>
+      <button type="button" class="btn btn-ghost" id="assistant-use-category">Выбрать категорию</button>
+      <button type="button" class="btn btn-primary" id="assistant-go-form">Перейти к оформлению</button>
+    </div>
+    <p class="hint">
+      Ответ помощника не меняет статус заявки и не закрывает её автоматически.
+    </p>
+  </div>
+</section>
+
+<form class="card form" id="report-form" method="post" action="/tickets" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+
+  <div class="hp-field" aria-hidden="true">
+    <label for="website">Не заполняйте это поле</label>
+    <input id="website" name="website" type="text" tabindex="-1" autocomplete="off">
+  </div>
+
+  <label for="description">Что случилось?</label>
+  <textarea id="description" name="description" rows="4" required maxlength="{{ max_description_length }}"
+            placeholder="Например: в кабинете 214 не работает проектор">{{ description or "" }}</textarea>
+
+  <div class="grid-2">
+    <div>
+      <label for="floor">Этажи и территории</label>
+      <select id="floor">
+        <option value="">Все этажи и территории</option>
+        {% for group_name, options in location_groups %}
+          <optgroup label="{{ group_name }}">
+            {% for value, label in options %}
+              <option value="{{ value }}"
+                {% if preselected and preselected.floor == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </optgroup>
+        {% endfor %}
+      </select>
+      <p class="hint">Выберите этаж или территорию — список помещений сузится.</p>
+    </div>
+
+    <div>
+      <label for="location_id">Помещение</label>
+      <select id="location_id" name="location_id" required>
+        <option value="">— выберите помещение —</option>
+        {% for loc in locations %}
+          <option value="{{ loc.id }}"
+            data-floor="{{ loc.floor }}"
+            data-room="{{ loc.room }}"
+            data-zone="{{ loc.zone_name }}"
+            {% if selected_location_id and selected_location_id == loc.id %}selected{% endif %}>
+            {{ loc.title }}
+          </option>
+        {% endfor %}
+      </select>
+      <p class="hint" id="location-hint">Этаж, территория и помещение выбираются вручную.</p>
+    </div>
+  </div>
+
+  <label for="category_id">Категория (необязательно)</label>
+  <select id="category_id" name="category_id">
+    <option value="">— определит сотрудник —</option>
+    {% for cat in categories %}
+      <option value="{{ cat.id }}"
+        {% if selected_category_id and selected_category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+    {% endfor %}
+  </select>
+
+  <label for="photo">Фотография (необязательно, до 5 МБ)</label>
+  <input id="photo" type="file" name="photo" accept="image/jpeg,image/png,image/webp">
+
+  <button class="btn btn-primary" type="submit">Отправить заявку</button>
+  <p class="hint">После отправки вы получите номер заявки и ссылку для отслеживания статуса.</p>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const floor = document.getElementById("floor");
+  const location = document.getElementById("location_id");
+  const hint = document.getElementById("location-hint");
+  if (!floor || !location) return;
+
+  const placeholders = Array.from(location.options).filter(function (option) {
+    return !option.value;
+  });
+  const places = Array.from(location.options).filter(function (option) {
+    return option.value;
+  });
+
+  function placeLabel(option) {
+    if (!option || !option.value) return "Этаж, территория и помещение выбираются вручную.";
+    return option.textContent.trim();
+  }
+
+  function updateHint() {
+    hint.textContent = placeLabel(location.selectedOptions[0]);
+  }
+
+  function applyFilter() {
+    const selectedFloor = floor.value;
+    places.forEach(function (option) {
+      const visible = !selectedFloor || option.dataset.floor === selectedFloor;
+      option.hidden = !visible;
+      option.disabled = !visible;
+    });
+
+    if (location.value && location.selectedOptions[0] && location.selectedOptions[0].disabled) {
+      location.value = "";
+    }
+    updateHint();
+  }
+
+  // При открытии по QR-коду сразу подставляем этаж выбранного помещения.
+  if (location.value) {
+    const selected = places.find(function (option) { return option.value === location.value; });
+    if (selected) floor.value = selected.dataset.floor || "";
+  }
+
+  floor.addEventListener("change", applyFilter);
+  location.addEventListener("change", updateHint);
+  applyFilter();
+})();
+
+(function () {
+  const button = document.getElementById("assistant-check");
+  const description = document.getElementById("description");
+  const resultBox = document.getElementById("assistant-result");
+  const kind = document.getElementById("assistant-kind");
+  const answer = document.getElementById("assistant-answer");
+  const source = document.getElementById("assistant-source");
+  const question = document.getElementById("assistant-question");
+  const categoryNote = document.getElementById("assistant-category");
+  const actions = document.getElementById("assistant-actions");
+  const useDraft = document.getElementById("assistant-use-draft");
+  const useCategory = document.getElementById("assistant-use-category");
+  const goForm = document.getElementById("assistant-go-form");
+  const categorySelect = document.getElementById("category_id");
+  if (!button || !description || !resultBox) return;
+
+  let lastDraft = "";
+  let lastCategoryId = null;
+
+  function show(data) {
+    lastDraft = data.draft || "";
+    lastCategoryId = data.suggested_category_id || null;
+
+    resultBox.hidden = false;
+    resultBox.dataset.kind = data.kind || "unknown";
+    kind.textContent = data.kind_label || "Ответ помощника";
+    answer.textContent = data.answer || "";
+    source.textContent = data.source ? "Источник: " + data.source : "";
+
+    question.hidden = !data.clarifying_question;
+    question.textContent = data.clarifying_question || "";
+
+    if (data.suggested_category) {
+      categoryNote.hidden = false;
+      categoryNote.textContent = "Предлагаемая категория: " + data.suggested_category;
+    } else {
+      categoryNote.hidden = true;
+    }
+
+    useDraft.hidden = !lastDraft;
+    useCategory.hidden = !lastCategoryId;
+    goForm.hidden = !(data.kind === "malfunction" || data.kind === "danger");
+    actions.hidden = !lastDraft && !lastCategoryId && goForm.hidden;
+  }
+
+  button.addEventListener("click", async function () {
+    const text = description.value.trim();
+    if (!text) {
+      resultBox.hidden = false;
+      resultBox.dataset.kind = "insufficient";
+      kind.textContent = "Недостаточно данных";
+      answer.textContent = "Сначала опишите проблему в поле «Что случилось?».";
+      source.textContent = "";
+      question.hidden = true;
+      categoryNote.hidden = true;
+      actions.hidden = true;
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = "Проверяю…";
+    try {
+      const response = await fetch("/assistant/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: text })
+      });
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      show(await response.json());
+    } catch (error) {
+      resultBox.hidden = false;
+      resultBox.dataset.kind = "unknown";
+      kind.textContent = "Помощник недоступен";
+      answer.textContent = "Не удалось получить ответ. Опишите проблему своими словами и отправьте заявку.";
+      source.textContent = "";
+      question.hidden = true;
+      categoryNote.hidden = true;
+      actions.hidden = true;
+    } finally {
+      button.disabled = false;
+      button.textContent = "Проверить текст";
+    }
+  });
+
+  useDraft.addEventListener("click", function () {
+    if (!lastDraft) return;
+    description.value = lastDraft;
+    description.focus();
+  });
+
+  useCategory.addEventListener("click", function () {
+    if (!lastCategoryId || !categorySelect) return;
+    categorySelect.value = String(lastCategoryId);
+    categorySelect.focus();
+  });
+
+  goForm.addEventListener("click", function () {
+    description.scrollIntoView({ behavior: "smooth", block: "center" });
+    description.focus();
+  });
+})();
+
+(function () {
+  const form = document.getElementById("report-form");
+  if (!form) return;
+
+  form.addEventListener("submit", function () {
+    const button = form.querySelector('button[type="submit"]');
+    if (!button || button.disabled) return;
+    button.disabled = true;
+    button.textContent = "Отправляем…";
+  });
+})();
+</script>
+{% endblock %}

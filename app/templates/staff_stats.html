@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Статистика — панель колледжа{% endblock %}
+
+{% block content %}
+<a class="back" href="/staff">← К списку заявок</a>
+
+<div class="row-between">
+  <div>
+    <h1>Статистика заявок</h1>
+    <p class="muted">Показатели считаются по реальным заявкам в базе данных.</p>
+  </div>
+  <div class="header-actions">
+    <a class="btn btn-ghost" href="{{ export_url }}">Экспорт CSV</a>
+    <a class="btn btn-ghost" href="/staff/stats">Обновить</a>
+  </div>
+</div>
+
+{% for message in filter_errors %}
+  <div class="alert alert-warn">{{ message }}</div>
+{% endfor %}
+
+<form class="card filters date-filters" method="get" action="/staff/stats">
+  <label class="date-filter">
+    <span>С</span>
+    <input type="date" name="date_from" value="{{ filters.date_from }}">
+  </label>
+  <label class="date-filter">
+    <span>По</span>
+    <input type="date" name="date_to" value="{{ filters.date_to }}">
+  </label>
+  <button class="btn btn-primary" type="submit">Показать</button>
+  <a class="btn btn-ghost" href="/staff/stats">Сбросить</a>
+</form>
+
+{% if period_active %}
+  <div class="alert alert-ok">Показана статистика за выбранный период.</div>
+{% endif %}
+
+<div class="stat-grid">
+  <article class="card stat-card">
+    <span class="stat-label">Всего заявок</span>
+    <strong class="stat-value">{{ total }}</strong>
+    <span class="hint">за всё время</span>
+  </article>
+  <article class="card stat-card stat-open">
+    <span class="stat-label">Открытые</span>
+    <strong class="stat-value">{{ open_count }}</strong>
+    <span class="hint">{{ open_percent }}% от всех</span>
+  </article>
+  <article class="card stat-card stat-resolved">
+    <span class="stat-label">Решены</span>
+    <strong class="stat-value">{{ resolved }}</strong>
+    <span class="hint">{{ resolved_percent }}% от всех</span>
+  </article>
+  <article class="card stat-card">
+    <span class="stat-label">Новые</span>
+    <strong class="stat-value">{{ new_count }}</strong>
+    <span class="hint">ещё не взяты в работу</span>
+  </article>
+  <article class="card stat-card">
+    <span class="stat-label">Отклонены</span>
+    <strong class="stat-value">{{ rejected }}</strong>
+    <span class="hint">с обязательным комментарием</span>
+  </article>
+  <article class="card stat-card">
+    {% if period_active %}
+      <span class="stat-label">За период</span>
+      <strong class="stat-value">{{ total }}</strong>
+      <span class="hint">с учётом фильтра по датам</span>
+    {% else %}
+      <span class="stat-label">За 30 дней</span>
+      <strong class="stat-value">{{ last_30_days }}</strong>
+      <span class="hint">новых обращений</span>
+    {% endif %}
+  </article>
+</div>
+
+<p class="hint">
+  «Открытые» — все заявки, кроме статусов «Решена» и «Отклонена».
+  Проценты округлены до одного знака.
+</p>
+
+{% if total == 0 %}
+  <div class="card center">
+    <h2>Пока нет заявок</h2>
+    <p class="muted">Статистика появится после первой отправленной заявки.</p>
+    <a class="btn btn-primary" href="/">Открыть форму заявителя</a>
+  </div>
+{% else %}
+<div class="grid-2 stats-columns">
+  <section class="card">
+    <h2>По категориям</h2>
+    {% for row in category_rows %}
+      <div class="bar-row">
+        <div class="bar-head">
+          <span>{{ row.name }}</span>
+          <strong>{{ row.count }}</strong>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width: {{ row.percent }}%"></div>
+        </div>
+        <span class="hint">{{ row.percent }}%</span>
+      </div>
+    {% else %}
+      <p class="muted">Категории ещё не заданы.</p>
+    {% endfor %}
+  </section>
+
+  <section class="card">
+    <h2>По помещениям</h2>
+    {% for row in location_rows %}
+      <div class="bar-row">
+        <div class="bar-head">
+          <span>{{ row.name }}</span>
+          <strong>{{ row.count }}</strong>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width: {{ row.percent }}%"></div>
+        </div>
+        <span class="hint">{{ row.percent }}%</span>
+      </div>
+    {% else %}
+      <p class="muted">Помещения ещё не заданы.</p>
+    {% endfor %}
+  </section>
+</div>
+{% endif %}
+{% endblock %}

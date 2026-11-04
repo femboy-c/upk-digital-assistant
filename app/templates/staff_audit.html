@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Журнал аудита — панель колледжа{% endblock %}
+
+{% block content %}
+<a class="back" href="/staff">← К списку заявок</a>
+
+<div class="row-between">
+  <div>
+    <h1>Журнал аудита</h1>
+    <p class="muted">Кто и когда менял помещения, QR-коды, пользователей и заявки. Всего записей: {{ total }}.</p>
+  </div>
+</div>
+
+<form class="card filters" method="get" action="/staff/audit">
+  <select name="action">
+    <option value="">Все действия</option>
+    {% for value, label in action_labels.items() %}
+      <option value="{{ value }}" {% if filters.action == value %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+
+  <select name="entity_type">
+    <option value="">Все объекты</option>
+    {% for value, label in entity_labels.items() %}
+      <option value="{{ value }}" {% if filters.entity_type == value %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+
+  <button class="btn btn-primary" type="submit">Показать</button>
+  <a class="btn btn-ghost" href="/staff/audit">Сбросить</a>
+</form>
+
+{% if rows %}
+<div class="audit-list">
+  {% for row in rows %}
+  <article class="card audit-entry">
+    <div class="row-between">
+      <strong>{{ row.action_label }}</strong>
+      <span class="muted">{{ row.entry.created_at.strftime("%d.%m.%Y %H:%M:%S") }}</span>
+    </div>
+    <p>{{ row.entry.summary }}</p>
+    <p class="hint">
+      {{ row.entity_label }}{% if row.entry.entity_id %} №{{ row.entry.entity_id }}{% endif %}
+      · {{ row.entry.actor.name if row.entry.actor else "пользователь удалён" }}
+      {% if row.entry.actor %}<span class="mono">@{{ row.entry.actor.login }}</span>{% endif %}
+    </p>
+    {% if row.details_pretty and row.details_pretty != "{}" %}
+      <details>
+        <summary>Подробности</summary>
+        <pre class="audit-details">{{ row.details_pretty }}</pre>
+      </details>
+    {% endif %}
+  </article>
+  {% endfor %}
+</div>
+
+{% if pages > 1 %}
+<nav class="pagination" aria-label="Постраничная навигация">
+  {% if page > 1 %}
+    <a class="btn btn-ghost" href="/staff/audit?{% if filters.action %}action={{ filters.action }}&{% endif %}{% if filters.entity_type %}entity_type={{ filters.entity_type }}&{% endif %}page={{ page - 1 }}">← Назад</a>
+  {% endif %}
+  <span class="pagination-current">Страница {{ page }} из {{ pages }}</span>
+  {% if page < pages %}
+    <a class="btn btn-ghost" href="/staff/audit?{% if filters.action %}action={{ filters.action }}&{% endif %}{% if filters.entity_type %}entity_type={{ filters.entity_type }}&{% endif %}page={{ page + 1 }}">Вперёд →</a>
+  {% endif %}
+</nav>
+{% endif %}
+{% else %}
+  <div class="card center">
+    <h2>Записей пока нет</h2>
+    <p class="muted">Журнал заполнится, когда сотрудники начнут менять помещения, пользователей или статусы.</p>
+  </div>
+{% endif %}
+{% endblock %}

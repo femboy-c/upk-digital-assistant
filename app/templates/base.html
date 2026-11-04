@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Колледж ДГУ — Цифровой помощник{% endblock %}</title>
+  <meta name="description" content="Цифровой помощник Колледжа Дагестанского государственного университета: сообщить о проблеме в помещении и отследить заявку.">
+  <script>
+  (function () {
+    var saved = null;
+    try { saved = localStorage.getItem("upk-theme"); } catch (error) {}
+    var dark = saved ? saved === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    document.documentElement.dataset.theme = dark ? "dark" : "light";
+  })();
+  </script>
+  {% if request.url.path == "/login"
+        or request.url.path.startswith("/staff")
+        or request.url.path.startswith("/track")
+        or request.url.path.startswith("/t/")
+        or request.url.path.startswith("/success") %}
+    <meta name="robots" content="noindex, nofollow">
+  {% endif %}
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Перейти к содержимому</a>
+  <header class="topbar">
+    <a class="brand" href="/">
+      <span class="brand-mark">ДГУ</span>
+      <span class="brand-text">
+        <span class="brand-title">Колледж ДГУ</span>
+        <span class="brand-sub">Цифровой помощник</span>
+      </span>
+    </a>
+    <nav class="nav">
+      <a href="/track">Проверить заявку</a>
+
+      <button class="theme-toggle" id="theme-toggle" type="button"
+              aria-label="Переключить тему" title="Переключить тему">
+        <span class="theme-icon theme-icon-sun" aria-hidden="true">☀</span>
+        <span class="theme-icon theme-icon-moon" aria-hidden="true">☾</span>
+      </button>
+
+      {% if nav_user %}
+        <details class="account-menu">
+          <summary class="account-toggle">
+            <span class="account-avatar">{{ nav_user.name[:1]|upper }}</span>
+            <span class="account-name">{{ nav_user.name }}</span>
+            <span class="account-caret" aria-hidden="true">▾</span>
+          </summary>
+
+          <div class="account-panel">
+            <div class="account-summary">
+              <strong>{{ nav_user.name }}</strong>
+              <span>{{ "Администратор" if nav_user.role == "admin" else "Сотрудник колледжа" }}</span>
+              <span class="muted">@{{ nav_user.login }}</span>
+            </div>
+
+            <a href="/staff">Панель заявок</a>
+            <a href="/staff/stats">Статистика</a>
+            <a href="/staff/locations">Помещения и QR</a>
+            {% if nav_user.role == "admin" %}
+              <a href="/staff/users">Пользователи</a>
+              <a href="/staff/audit">Журнал аудита</a>
+            {% endif %}
+            <a href="/staff/password">Настройки аккаунта</a>
+
+            <form method="post" action="/logout">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+              <button type="submit">Выйти</button>
+            </form>
+          </div>
+        </details>
+      {% else %}
+        <a class="nav-btn" href="/login">Вход для сотрудника</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <main class="wrap" id="main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    Колледж Дагестанского государственного университета · Цифровой помощник · демонстрационная версия
+  </footer>
+
+  <script>
+  (function () {
+    const menu = document.querySelector(".account-menu");
+    if (!menu) return;
+
+    document.addEventListener("click", function (event) {
+      if (menu.open && !menu.contains(event.target)) menu.open = false;
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") menu.open = false;
+    });
+  })();
+  </script>
+
+  <script>
+  (function () {
+    const root = document.documentElement;
+    const button = document.getElementById("theme-toggle");
+    if (!button) return;
+
+    function updateLabel() {
+      const dark = root.dataset.theme === "dark";
+      button.setAttribute("aria-pressed", dark ? "true" : "false");
+      button.setAttribute(
+        "aria-label",
+        dark ? "Включить светлую тему" : "Включить тёмную тему"
+      );
+      button.title = dark ? "Светлая тема" : "Тёмная тема";
+    }
+
+    button.addEventListener("click", function () {
+      const next = root.dataset.theme === "dark" ? "light" : "dark";
+      root.dataset.theme = next;
+      try { localStorage.setItem("upk-theme", next); } catch (error) {}
+      updateLabel();
+    });
+
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    function followSystem(event) {
+      let saved = null;
+      try { saved = localStorage.getItem("upk-theme"); } catch (error) {}
+      if (saved) return;
+      root.dataset.theme = event.matches ? "dark" : "light";
+      updateLabel();
+    }
+    if (media.addEventListener) media.addEventListener("change", followSystem);
+    else if (media.addListener) media.addListener(followSystem);
+
+    updateLabel();
+  })();
+  </script>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

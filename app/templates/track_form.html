@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Проверить заявку — Колледж ДГУ{% endblock %}
+
+{% block content %}
+<h1>Проверить статус заявки</h1>
+<p class="lead">Введите номер заявки и код из ссылки, которую получили после отправки.</p>
+
+<form class="card form" method="get" action="/track">
+  <label for="number">Номер заявки</label>
+  <input id="number" name="number" placeholder="ДГУ-2026-000001" required>
+
+  <label for="token">Код отслеживания</label>
+  <input id="token" name="token" placeholder="например: AbCdEfGhIjKlMnOp" required>
+
+  <button class="btn btn-primary" type="submit">Проверить</button>
+</form>
+
+<p class="hint">Если у вас есть полная ссылка вида <code>/t/КОД</code> — просто откройте её.</p>
+{% endblock %}

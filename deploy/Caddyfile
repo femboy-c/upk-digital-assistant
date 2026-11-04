@@ -1,0 +1,18 @@
+# УПК — пример конфигурации Caddy с автоматическим HTTPS.
+# Замените upk.example.ru на свой домен и укажите реальный путь к проекту.
+
+upk.example.ru {
+    encode gzip
+
+    # Не пропускаем слишком большие тела запросов (фото + форма).
+    request_body {
+        max_size 12MB
+    }
+
+    # Caddy сам выпускает и обновляет сертификат Let's Encrypt.
+    reverse_proxy 127.0.0.1:8000
+
+    header {
+        -Server
+    }
+}

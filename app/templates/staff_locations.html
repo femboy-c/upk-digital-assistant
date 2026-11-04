@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Помещения и QR — панель колледжа{% endblock %}
+
+{% block content %}
+<a class="back" href="/staff">← К списку заявок</a>
+
+<div class="row-between">
+  <div>
+    <h1>Помещения и QR-коды</h1>
+    <p class="muted">Привязка QR-кода к этажу/территории и кабинету.</p>
+  </div>
+  {% if user.role == "admin" %}
+    <a class="btn btn-primary" href="/staff/locations/new">Добавить помещение</a>
+  {% endif %}
+</div>
+
+{% if saved %}
+  <div class="alert alert-ok">Изменения сохранены.</div>
+{% endif %}
+{% if error %}
+  <div class="alert alert-error">{{ error }}</div>
+{% endif %}
+
+{% if not public_base_configured %}
+  <div class="alert alert-warn">
+    <strong>PUBLIC_BASE_URL не задан.</strong> QR-коды сейчас ведут на локальный адрес
+    ({{ base_url }}) и не откроются со смартфона. Укажите в <code>.env</code> адрес вида
+    <code>http://192.168.1.50:8000</code> или домен и перезапустите сервер.
+  </div>
+{% endif %}
+
+<p class="hint">
+  QR ведёт на <code>{{ base_url }}/?qr=КЛЮЧ</code>. Если изменить ключ, ранее
+  распечатанный QR-код перестанет работать — распечатайте новый.
+</p>
+
+{% if locations %}
+<div class="qr-grid">
+  {% for loc in locations %}
+  <article class="card qr-card">
+    <div class="row-between">
+      <h2>{{ loc.title }}</h2>
+      <span class="mono muted">{{ loc.qr_key }}</span>
+    </div>
+    <p class="muted">
+      {{ loc.floor_label }}{% if loc.room %} · каб. {{ loc.room }}{% endif %}
+    </p>
+
+    <img class="qr-image" src="/qr/{{ loc.qr_key }}.png"
+         alt="QR-код помещения {{ loc.title }}" width="180" height="180">
+
+    <p class="hint qr-link"><code>{{ qr_urls[loc.id] }}</code></p>
+
+    <div class="qr-actions">
+      <a class="btn btn-ghost" href="/?qr={{ loc.qr_key }}">Открыть форму</a>
+      <a class="btn btn-ghost" href="/qr/{{ loc.qr_key }}.png"
+         download="qr-{{ loc.qr_key }}.png">Скачать PNG</a>
+      {% if user.role == "admin" %}
+        <a class="btn btn-ghost" href="/staff/locations/{{ loc.id }}/edit">Изменить</a>
+      {% endif %}
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+  <div class="card center">
+    <h2>Помещений пока нет</h2>
+    <p class="muted">Добавьте первое помещение и привяжите к нему QR-код.</p>
+  </div>
+{% endif %}
+{% endblock %}

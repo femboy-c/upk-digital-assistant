@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ "Изменить пользователя" if is_edit else "Новый пользователь" }} — панель колледжа{% endblock %}
+
+{% block content %}
+<a class="back" href="/staff/users">← К пользователям</a>
+
+<div class="card narrow">
+  <h1>{{ "Изменить пользователя" if is_edit else "Новый пользователь" }}</h1>
+  <p class="lead">
+    {% if is_edit %}
+      Логин и роль можно изменить. Пароль заполняйте только если его нужно сбросить.
+    {% else %}
+      Создайте учётную запись сотрудника или администратора.
+    {% endif %}
+  </p>
+
+  {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+  <form class="form" method="post"
+        action="{{ '/staff/users/' ~ target.id if is_edit else '/staff/users' }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+
+    <label for="name">Имя</label>
+    <input id="name" name="name" value="{{ values.name }}" required maxlength="120">
+
+    <label for="login">Логин</label>
+    <input id="login" name="login" value="{{ values.login }}" required
+           pattern="[a-zA-Z0-9._-]{3,60}" placeholder="Например: ivanov">
+    <p class="hint">3–60 латинских букв, цифр, точек, дефисов или подчёркиваний.</p>
+
+    <label for="role">Роль</label>
+    <select id="role" name="role">
+      {% for role in roles %}
+        <option value="{{ role }}" {% if values.role == role %}selected{% endif %}>
+          {{ "Администратор" if role == "admin" else "Сотрудник" }}
+        </option>
+      {% endfor %}
+    </select>
+
+    {% if is_edit %}
+      <label class="checkbox-row" for="is_active">
+        <input id="is_active" name="is_active" type="checkbox" value="1"
+               {% if values.is_active %}checked{% endif %}>
+        Учётная запись активна
+      </label>
+    {% endif %}
+
+    <label for="password">{{ "Новый пароль (если нужно сменить)" if is_edit else "Пароль" }}</label>
+    <input id="password" name="password" type="password" autocomplete="new-password"
+           {% if not is_edit %}required{% endif %} minlength="8">
+    <p class="hint">Минимум 8 символов.</p>
+
+    <label for="confirm_password">Повторите пароль</label>
+    <input id="confirm_password" name="confirm_password" type="password"
+           autocomplete="new-password" {% if not is_edit %}required{% endif %} minlength="8">
+
+    <button class="btn btn-primary" type="submit">
+      {{ "Сохранить изменения" if is_edit else "Создать пользователя" }}
+    </button>
+  </form>
+
+  {% if is_edit %}
+    <hr>
+    <h2>Удаление</h2>
+    <p class="hint">
+      Удалить можно только пользователя без заявок, комментариев и истории.
+      В остальных случаях используйте отключение учётной записи.
+    </p>
+    <form method="post" action="/staff/users/{{ target.id }}/delete"
+          onsubmit="return confirm('Удалить пользователя @{{ target.login }}? Это действие необратимо.');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <button class="btn btn-danger" type="submit">Удалить пользователя</button>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}

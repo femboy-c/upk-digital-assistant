@@ -1,0 +1,15 @@
+qr_key,title,url,png
+assembly-hall,Актовый зал,http://10.167.225.109:8000/?qr=assembly-hall,assembly-hall.png
+locker-women,Женская раздевалка,http://10.167.225.109:8000/?qr=locker-women,locker-women.png
+locker-men,Мужская раздевалка,http://10.167.225.109:8000/?qr=locker-men,locker-men.png
+hall1,Общая зона: холл 1 этажа,http://10.167.225.109:8000/?qr=hall1,hall1.png
+gym,Спортзал,http://10.167.225.109:8000/?qr=gym,gym.png
+canteen,Столовая,http://10.167.225.109:8000/?qr=canteen,canteen.png
+lab101,"1 этаж, каб. 101",http://10.167.225.109:8000/?qr=lab101,lab101.png
+room214,"2 этаж, каб. 214",http://10.167.225.109:8000/?qr=room214,room214.png
+medical,Медпункт,http://10.167.225.109:8000/?qr=medical,medical.png
+room305,"3 этаж, каб. 305",http://10.167.225.109:8000/?qr=room305,room305.png
+yard-back,Задний двор,http://10.167.225.109:8000/?qr=yard-back,yard-back.png
+yard-back-women,Задний двор: женский санузел,http://10.167.225.109:8000/?qr=yard-back-women,yard-back-women.png
+yard-back-men,Задний двор: мужской санузел,http://10.167.225.109:8000/?qr=yard-back-men,yard-back-men.png
+yard-front,Передний двор,http://10.167.225.109:8000/?qr=yard-front,yard-front.png

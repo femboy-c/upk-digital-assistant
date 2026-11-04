@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Панель колледжа — заявки{% endblock %}
+
+{% block content %}
+<div class="row-between">
+  <div>
+    <h1>Заявки</h1>
+    <p class="muted">
+      Вы вошли как {{ user.name }} ({{ user.role }}) ·
+      всего заявок: {{ total }}
+    </p>
+  </div>
+  <div class="header-actions">
+    <a class="btn btn-ghost" href="/staff/stats">Статистика</a>
+    <a class="btn btn-ghost" href="/staff/locations">Помещения и QR</a>
+    <a class="btn btn-ghost" href="/staff/export.csv{{ export_query }}">Экспорт CSV</a>
+  </div>
+</div>
+
+{% if deleted %}
+  <div class="alert alert-ok">Заявка удалена вместе с комментариями, историей и фотографиями.</div>
+{% endif %}
+
+{% for message in filter_errors %}
+  <div class="alert alert-warn">{{ message }}</div>
+{% endfor %}
+
+<form class="card filters" method="get" action="/staff">
+  <input name="q" value="{{ filters.q }}" placeholder="Поиск по номеру или тексту">
+
+  <select name="status">
+    <option value="">Все статусы</option>
+    {% for s in statuses %}
+      <option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+
+  <select name="category_id">
+    <option value="">Все категории</option>
+    {% for c in categories %}
+      <option value="{{ c.id }}" {% if filters.category_id == c.id|string %}selected{% endif %}>{{ c.name }}</option>
+    {% endfor %}
+  </select>
+
+  <select name="location_id">
+    <option value="">Все помещения</option>
+    {% for l in locations %}
+      <option value="{{ l.id }}" {% if filters.location_id == l.id|string %}selected{% endif %}>{{ l.title }}</option>
+    {% endfor %}
+  </select>
+
+  <label class="date-filter">
+    <span>С</span>
+    <input type="date" name="date_from" value="{{ filters.date_from }}">
+  </label>
+  <label class="date-filter">
+    <span>По</span>
+    <input type="date" name="date_to" value="{{ filters.date_to }}">
+  </label>
+
+  <button class="btn btn-primary" type="submit">Найти</button>
+  <a class="btn btn-ghost" href="/staff">Сбросить</a>
+</form>
+
+{% if tickets %}
+<table class="table">
+  <thead>
+    <tr>
+      <th>Номер</th><th>Дата</th><th>Кратко</th><th>Место</th>
+      <th>Категория</th><th>Исполнитель</th><th>Статус</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for t in tickets %}
+    <tr>
+      <td data-label="Номер"><a class="mono" href="/staff/ticket/{{ t.id }}">{{ t.public_number }}</a></td>
+      <td class="nowrap" data-label="Дата">{{ t.created_at.strftime("%d.%m.%Y %H:%M") }}</td>
+      <td data-label="Кратко">{{ t.title }}</td>
+      <td data-label="Место">{{ t.location.title if t.location else "—" }}</td>
+      <td data-label="Категория">{{ t.category.name if t.category else "—" }}</td>
+      <td data-label="Исполнитель">{{ t.assignee.name if t.assignee else "—" }}</td>
+      <td data-label="Статус"><span class="badge" data-status="{{ t.status }}">{{ t.status }}</span></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+  <div class="card center">
+    <h2>Ничего не найдено</h2>
+    <p class="muted">По этим фильтрам заявок нет. Попробуйте изменить условия поиска.</p>
+    <a class="btn btn-ghost" href="/staff">Сбросить фильтры</a>
+  </div>
+{% endif %}
+
+{% if pages > 1 %}
+<nav class="pagination" aria-label="Постраничная навигация">
+  {% if page > 1 %}
+    <a class="btn btn-ghost" href="/staff{{ pagination_prefix }}page={{ page - 1 }}">← Назад</a>
+  {% endif %}
+  <span class="pagination-current">Страница {{ page }} из {{ pages }}</span>
+  {% if page < pages %}
+    <a class="btn btn-ghost" href="/staff{{ pagination_prefix }}page={{ page + 1 }}">Вперёд →</a>
+  {% endif %}
+</nav>
+{% endif %}
+{% endblock %}

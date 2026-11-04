@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+itsdangerous
+jinja2
+python-multipart
+python-dotenv
+qrcode[pil]

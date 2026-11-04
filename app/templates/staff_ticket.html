@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}{{ ticket.public_number }} — панель колледжа{% endblock %}
+
+{% block content %}
+<a class="back" href="/staff">← К списку заявок</a>
+
+{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+{% if saved %}<div class="alert alert-ok">Изменения сохранены. Заявитель увидит их по своей ссылке, если она активна.</div>{% endif %}
+{% if comment_saved %}<div class="alert alert-ok">Комментарий добавлен.</div>{% endif %}
+
+<div class="card">
+  <div class="row-between">
+    <h1 class="mono">{{ ticket.public_number }}</h1>
+    <span class="badge" data-status="{{ ticket.status }}">{{ ticket.status }}</span>
+  </div>
+  <p class="muted">Создана {{ ticket.created_at.strftime("%d.%m.%Y в %H:%M") }} ·
+     обновлена {{ ticket.updated_at.strftime("%d.%m.%Y %H:%M") }}</p>
+
+  <dl class="details">
+    <dt>Описание</dt><dd>{{ ticket.description }}</dd>
+    <dt>Место</dt><dd>{{ ticket.location.title if ticket.location else "—" }}</dd>
+    <dt>Категория</dt><dd>{{ ticket.category.name if ticket.category else "—" }}</dd>
+    <dt>Исполнитель</dt><dd>{{ ticket.assignee.name if ticket.assignee else "не назначен" }}</dd>
+  </dl>
+
+  {% if attachments %}
+    <h2 class="section-title">Фотографии</h2>
+    <ul class="attachments">
+      {% for a in attachments %}
+        <li>
+          <a href="/staff/attachment/{{ a.id }}" target="_blank" rel="noopener">
+            Фото {{ loop.index }}
+          </a>
+          <span class="muted">{{ a.created_at.strftime("%d.%m.%Y %H:%M") }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Ссылка отслеживания</h2>
+  {% if ticket.tracking_state == "revoked" %}
+    <p class="alert alert-warn">
+      Ссылка отозвана {{ ticket.tracking_revoked_at.strftime("%d.%m.%Y %H:%M") }}.
+      Заявитель не может открыть заявку по прежней ссылке.
+    </p>
+  {% elif ticket.tracking_state == "expired" %}
+    <p class="alert alert-warn">
+      Срок действия ссылки истёк {{ ticket.tracking_expires_at.strftime("%d.%m.%Y %H:%M") }}.
+    </p>
+  {% elif ticket.tracking_expires_at %}
+    <p class="muted">
+      Ссылка действует до {{ ticket.tracking_expires_at.strftime("%d.%m.%Y %H:%M") }}.
+    </p>
+  {% else %}
+    <p class="muted">Ссылка бессрочная.</p>
+  {% endif %}
+
+  <div class="header-actions">
+    {% if ticket.tracking_state == "revoked" %}
+      <form method="post" action="/staff/ticket/{{ ticket.id }}/tracking/restore">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <button class="btn btn-primary" type="submit">Восстановить ссылку</button>
+      </form>
+    {% else %}
+      <form method="post" action="/staff/ticket/{{ ticket.id }}/tracking/revoke">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <button class="btn btn-danger" type="submit">Отозвать ссылку</button>
+      </form>
+    {% endif %}
+
+    <form class="inline-form" method="post" action="/staff/ticket/{{ ticket.id }}/tracking/extend">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <input class="days-input" type="number" name="days" min="1" max="3650"
+             value="{{ tracking_ttl_days }}" aria-label="На сколько дней продлить">
+      <button class="btn btn-ghost" type="submit">Продлить</button>
+    </form>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h2>Изменить статус</h2>
+    <form class="form" method="post" action="/staff/ticket/{{ ticket.id }}/status">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <label for="status">Новый статус</label>
+      <select id="status" name="status">
+        {% for s in status_options %}
+          <option value="{{ s }}" {% if s == ticket.status %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+      <p class="hint">Показаны только допустимые переходы из текущего статуса.</p>
+
+      <label for="assignee_id">Исполнитель</label>
+      <select id="assignee_id" name="assignee_id">
+        <option value="">— не назначен —</option>
+        {% for a in assignees %}
+          <option value="{{ a.id }}" {% if ticket.assignee_id == a.id %}selected{% endif %}>{{ a.name }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="note">Комментарий / результат</label>
+      <textarea id="note" name="note" rows="3" maxlength="{{ max_note_length }}"
+        placeholder="Обязателен для статусов «Решена» и «Отклонена»"></textarea>
+
+      <button class="btn btn-primary" type="submit">Сохранить</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Добавить комментарий</h2>
+    <form class="form" method="post" action="/staff/ticket/{{ ticket.id }}/comment">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <label for="body">Текст</label>
+      <textarea id="body" name="body" rows="3" required maxlength="{{ max_comment_length }}"></textarea>
+
+      <label for="visibility">Кому виден</label>
+      <select id="visibility" name="visibility">
+        <option value="public">Заявителю (публичный)</option>
+        <option value="internal">Только сотрудникам (внутренний)</option>
+      </select>
+
+      <button class="btn btn-primary" type="submit">Добавить</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Комментарии</h2>
+  {% for c in comments %}
+    <div class="comment">
+      <div class="row-between">
+        <strong>{{ c.author.name if c.author else "Система" }}</strong>
+        <span class="badge">{{ "внутренний" if c.visibility == "internal" else "публичный" }}</span>
+      </div>
+      <p>{{ c.body }}</p>
+      <span class="muted">{{ c.created_at.strftime("%d.%m.%Y %H:%M") }}</span>
+    </div>
+  {% else %}
+    <p class="muted">Комментариев пока нет.</p>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2>История</h2>
+  <ul class="timeline">
+    {% for h in history %}
+      <li>
+        <strong>{{ h.old_status or "—" }} → {{ h.new_status }}</strong>
+        <span class="muted">— {{ h.actor.name if h.actor else "система" }},
+          {{ h.created_at.strftime("%d.%m.%Y %H:%M") }}</span>
+        {% if h.note %}<div class="muted">{{ h.note }}</div>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+
+{% if user.role == "admin" %}
+<div class="card">
+  <h2>Удаление заявки</h2>
+  <p class="alert alert-warn">
+    Заявка, все комментарии, история статусов и фотографии будут удалены
+    безвозвратно. Восстановить их можно только из резервной копии.
+  </p>
+  <form method="post" action="/staff/ticket/{{ ticket.id }}/delete"
+        onsubmit="return confirm('Удалить заявку {{ ticket.public_number }} безвозвратно?');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <button class="btn btn-danger" type="submit">Удалить заявку навсегда</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,23 @@
+# Пример systemd-сервиса для УПК.
+# Скопируйте файл в /etc/systemd/system/upk.service и поправьте пути/пользователя.
+
+[Unit]
+Description=УПК: Цифровой помощник колледжа
+After=network.target
+
+[Service]
+Type=simple
+User=upk
+Group=upk
+WorkingDirectory=/home/mamai/upk
+EnvironmentFile=/home/mamai/upk/.env
+ExecStart=/home/mamai/upk/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=3
+PrivateTmp=true
+NoNewPrivileges=true
+# Новые файлы (загрузки, бэкапы, БД) создаются только для владельца.
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

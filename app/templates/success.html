@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Заявка создана — Колледж ДГУ{% endblock %}
+
+{% block content %}
+<div class="card center">
+  <div class="big-ok">✓</div>
+  <h1>Заявка зарегистрирована</h1>
+  <p class="lead">Номер вашей заявки:</p>
+  <p class="ticket-number">{{ number }}</p>
+
+  <p>Сохраните ссылку ниже — по ней можно проверить статус. Ссылка содержит секретный код,
+     не передавайте её посторонним.</p>
+
+  <p><a class="btn btn-primary" href="/t/{{ token }}">Открыть страницу отслеживания</a></p>
+  <p class="hint">Ссылка: <code>/t/{{ token }}</code></p>
+</div>
+{% endblock %}

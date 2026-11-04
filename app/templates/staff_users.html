@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Пользователи — панель колледжа{% endblock %}
+
+{% block content %}
+<a class="back" href="/staff">← К списку заявок</a>
+
+<div class="row-between">
+  <div>
+    <h1>Пользователи</h1>
+    <p class="muted">Сотрудники и администраторы колледжа. Всего: {{ users|length }}.</p>
+  </div>
+  <a class="btn btn-primary" href="/staff/users/new">Добавить пользователя</a>
+</div>
+
+{% if saved %}<div class="alert alert-ok">Изменения сохранены.</div>{% endif %}
+{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+<div class="card">
+<table class="table">
+  <thead>
+    <tr>
+      <th>Имя</th><th>Логин</th><th>Роль</th><th>Состояние</th><th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for u in users %}
+    <tr>
+      <td data-label="Имя">{{ u.name }}</td>
+      <td data-label="Логин" class="mono">@{{ u.login }}</td>
+      <td data-label="Роль">{{ "Администратор" if u.role == "admin" else "Сотрудник" }}</td>
+      <td data-label="Состояние">
+        {% if u.is_active %}
+          <span class="badge" data-status="Решена">активен</span>
+        {% else %}
+          <span class="badge" data-status="Отклонена">отключён</span>
+        {% endif %}
+      </td>
+      <td data-label="Действия">
+        <a class="btn btn-ghost" href="/staff/users/{{ u.id }}/edit">Изменить</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<p class="hint">
+  Отключённый пользователь не может войти, но его заявки, комментарии и история
+  сохраняются. Удаление доступно только для учётных записей без связанных данных.
+</p>
+{% endblock %}

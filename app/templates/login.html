@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Вход для сотрудника — Колледж ДГУ{% endblock %}
+
+{% block content %}
+<div class="card narrow">
+  <h1>Вход для сотрудника Колледжа ДГУ</h1>
+  <p class="lead">Панель доступна только после авторизации.</p>
+
+  {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+  <form class="form" method="post" action="/login">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <label for="login">Логин</label>
+    <input id="login" name="login" required autocomplete="username">
+
+    <label for="password">Пароль</label>
+    <input id="password" name="password" type="password" required autocomplete="current-password">
+
+    <button class="btn btn-primary" type="submit">Войти</button>
+  </form>
+
+  <p class="hint">
+    Демонстрационные логины и пароли указаны в README проекта. Перед публичным
+    запуском их нужно сменить.
+  </p>
+</div>
+{% endblock %}

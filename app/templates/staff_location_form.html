@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}{{ "Изменить помещение" if is_edit else "Новое помещение" }} — панель колледжа{% endblock %}
+
+{% block content %}
+<a class="back" href="/staff/locations">← К помещениям и QR</a>
+
+<div class="card narrow">
+  <h1>{{ "Изменить помещение" if is_edit else "Новое помещение" }}</h1>
+  <p class="lead">Укажите, куда ведёт QR-код и какое место подставится в форму заявки.</p>
+
+  {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+  <form class="form" method="post"
+        action="{{ '/staff/locations/' ~ location.id if is_edit else '/staff/locations' }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+
+    <div class="grid-2">
+      <div>
+        <label for="floor">Этажи и территории</label>
+        <select id="floor" name="floor" required>
+          <option value="">— выберите этаж или территорию —</option>
+          {% for group_name, options in location_groups %}
+            <optgroup label="{{ group_name }}">
+              {% for value, label in options %}
+                <option value="{{ value }}" {% if values.floor == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </optgroup>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="room">Кабинет</label>
+        <input id="room" name="room" value="{{ values.room }}" placeholder="Например: 214">
+      </div>
+    </div>
+
+    <label for="zone_name">Название зоны (если это не кабинет)</label>
+    <input id="zone_name" name="zone_name" value="{{ values.zone_name }}"
+           placeholder="Например: Холл 1 этажа">
+
+    <label for="qr_key">QR-ключ</label>
+    <input id="qr_key" name="qr_key" value="{{ values.qr_key }}" required
+           pattern="[a-z0-9_-]{3,40}" placeholder="Например: room214">
+    <p class="hint">
+      Только латинские буквы, цифры, дефис и подчёркивание, 3–40 символов.
+      Именно этот ключ попадает в QR-код.
+    </p>
+
+    {% if is_edit %}
+      <div class="alert alert-warn">
+        При смене QR-ключа старая ссылка и ранее распечатанный QR-код перестанут работать.
+        Текущий ключ: <code>{{ location.qr_key }}</code>.
+      </div>
+    {% endif %}
+
+    <button class="btn btn-primary" type="submit">
+      {{ "Сохранить изменения" if is_edit else "Создать помещение" }}
+    </button>
+  </form>
+
+  {% if is_edit %}
+    <div class="qr-preview">
+      <h2>Текущий QR-код</h2>
+      <img class="qr-image" src="/qr/{{ location.qr_key }}.png"
+           alt="QR-код помещения {{ location.title }}" width="180" height="180">
+      <p class="hint"><code>{{ qr_url }}</code></p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
