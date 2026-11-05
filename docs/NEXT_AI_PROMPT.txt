@@ -19,6 +19,8 @@ uvicorn слушает 127.0.0.1:8000. Публичный адрес време�
 - публичный HTTPS: https://kitty-consistent-cgi-notified.trycloudflare.com
   (временный quick tunnel cloudflared; меняется при перезапуске);
 - постоянного домена и автозапуска нет;
+- поиска в Яндексе/Google пока нет: временный адрес не индексируется.
+  Для поиска нужен домен + Вебмастер, см. docs/SEO.md;
 - .env: SESSION_HTTPS_ONLY=1, TRUST_PROXY=1, MAX_REQUEST_BODY_MB=30;
 - прямой вход по http://127.0.0.1:8000 не сохраняет сессию — нужен публичный
   HTTPS-адрес;
@@ -36,7 +38,7 @@ fuser -k 8000/tcp
 ТЕСТЫ:
 cd /home/mamai/upk
 .venv/bin/pytest -q
-Сейчас: 135 passed.
+Сейчас: 138 passed.
 
 ДОСТУП:
 - демо-учётка staff отключена;
@@ -101,7 +103,8 @@ GIT:
 - app/duplicates.py — поиск похожих заявок и объединение;
 - app/sla.py — нормативы и просрочка;
 - app/templates/my_tickets.html — личный кабинет;
-- tests/ — 135 тестов.
+- docs/SEO.md — домен, Вебмастер, sitemap и поиск;
+- tests/ — 138 тестов.
 
 БЛИЖАЙШИЕ ЗАДАЧИ (согласовать с пользователем):
 1. Постоянный домен + именованный туннель Cloudflare.
@@ -122,5 +125,5 @@ GIT:
 
 ПОСЛЕ ЛЮБЫХ ИЗМЕНЕНИЙ:
 1. .venv/bin/python scripts/backup.py (если меняются данные/схема);
-2. .venv/bin/pytest -q — должно быть 135+ passed;
+2. .venv/bin/pytest -q — должно быть 138+ passed;
 3. перезапустить uvicorn, если менялись .py-файлы.

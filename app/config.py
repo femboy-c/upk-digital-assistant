@@ -32,6 +32,17 @@ FLOOR_LABELS = {value: label for _, options in LOCATION_GROUPS for value, label 
 # Пример: http://192.168.1.50:8000 или https://upk.example.ru
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "").strip().rstrip("/")
 
+# Данные для поисковых систем и карточек ссылок.
+SITE_NAME = "Колледж ДГУ"
+SITE_DESCRIPTION = (
+    "Оставить жалобу или сообщить о проблеме в Колледже ДГУ: неисправности "
+    "в кабинетах, коридорах, столовой, спортзале и на территории. Онлайн-заявка "
+    "и отслеживание статуса."
+)
+# Коды подтверждения владельца сайта в Яндекс.Вебмастере и Google Search Console.
+YANDEX_VERIFICATION = os.getenv("YANDEX_VERIFICATION", "").strip()
+GOOGLE_VERIFICATION = os.getenv("GOOGLE_VERIFICATION", "").strip()
+
 # Вложения храним вне static/: доступ к ним выдаётся только через проверяемые роуты.
 UPLOAD_DIR = Path(os.getenv("UPK_UPLOAD_DIR", str(BASE_DIR / "data" / "uploads")))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)

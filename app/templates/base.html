@@ -3,8 +3,37 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Колледж ДГУ — Цифровой помощник{% endblock %}</title>
-  <meta name="description" content="Цифровой помощник Колледжа Дагестанского государственного университета: сообщить о проблеме в помещении и отследить заявку.">
+  <title>{% block title %}Жалобы и заявки — Колледж ДГУ{% endblock %}</title>
+  <meta name="description" content="{% block description %}{{ site_description }}{% endblock %}">
+  <meta name="keywords" content="жалобы ДГУ, Колледж ДГУ, заявка, проблема, неисправность, колледж, Дагестанский государственный университет">
+  <link rel="canonical" href="{{ canonical_url }}">
+  <meta name="theme-color" content="#2457e6">
+  <meta property="og:locale" content="ru_RU">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="{{ site_name }}">
+  <meta property="og:title" content="Жалобы и заявки — Колледж ДГУ">
+  <meta property="og:description" content="{{ site_description }}">
+  <meta property="og:url" content="{{ canonical_url }}">
+  {% if yandex_verification %}
+    <meta name="yandex-verification" content="{{ yandex_verification }}">
+  {% endif %}
+  {% if google_verification %}
+    <meta name="google-site-verification" content="{{ google_verification }}">
+  {% endif %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": {{ (site_name ~ " — жалобы и заявки")|tojson }},
+    "url": {{ site_base_url|tojson }},
+    "description": {{ site_description|tojson }},
+    "inLanguage": "ru-RU",
+    "publisher": {
+      "@type": "CollegeOrUniversity",
+      "name": "Колледж Дагестанского государственного университета"
+    }
+  }
+  </script>
   <script>
   (function () {
     var saved = null;
@@ -33,6 +62,9 @@
         <span class="brand-sub">Цифровой помощник</span>
       </span>
     </a>
+    {% if not nav_user and request.url.path != "/login" %}
+      <a class="nav-btn mobile-login" href="/login">Вход для сотрудника</a>
+    {% endif %}
     <nav class="nav">
       <a href="/faq">Частые вопросы</a>
       <a href="/track">Проверить заявку</a>
@@ -75,7 +107,7 @@
           </div>
         </details>
       {% else %}
-        <a class="nav-btn" href="/login">Вход для сотрудника</a>
+        <a class="nav-btn login-desktop" href="/login">Вход для сотрудника</a>
       {% endif %}
     </nav>
   </header>

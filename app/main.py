@@ -10,7 +10,7 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
@@ -20,6 +20,7 @@ from .config import (
     IS_PRODUCTION,
     MAX_REQUEST_BODY_BYTES,
     PUBLIC_BASE_URL,
+    public_base_url,
 )
 from .database import BASE_DIR, SessionLocal, restrict_data_permissions
 from .log_redaction import install_log_redaction
@@ -156,17 +157,47 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
 
 
 @app.get("/robots.txt", response_class=PlainTextResponse)
-def robots_txt():
-    """Закрытые разделы не индексируются."""
-    return (
-        "User-agent: *\n"
-        "Disallow: /staff\n"
-        "Disallow: /login\n"
-        "Disallow: /track\n"
-        "Disallow: /t/\n"
-        "Disallow: /success\n"
-        "Disallow: /assistant\n"
+def robots_txt(request: Request):
+    """Закрытые разделы не индексируются, публичные — открыты."""
+    base = public_base_url(request).rstrip("/")
+    lines = [
+        "User-agent: *",
+        "Disallow: /staff",
+        "Disallow: /login",
+        "Disallow: /track",
+        "Disallow: /t/",
+        "Disallow: /success",
+        "Disallow: /assistant",
+        "Allow: /",
+    ]
+    if base:
+        lines.append(f"Sitemap: {base}/sitemap.xml")
+    return "\n".join(lines) + "\n"
+
+
+@app.get("/sitemap.xml", include_in_schema=False)
+def sitemap_xml(request: Request):
+    """Карта публичных страниц для Яндекса и Google."""
+    from xml.sax.saxutils import escape
+
+    base = public_base_url(request).rstrip("/")
+    pages = (
+        ("", "1.0", "daily"),
+        ("/faq", "0.8", "weekly"),
+        ("/privacy", "0.3", "yearly"),
     )
+    items = "".join(
+        f"<url><loc>{escape(base + (path or '/'))}</loc>"
+        f"<changefreq>{frequency}</changefreq>"
+        f"<priority>{priority}</priority></url>"
+        for path, priority, frequency in pages
+    )
+    body = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        f"{items}</urlset>"
+    )
+    return Response(content=body, media_type="application/xml")
 
 
 @app.exception_handler(Exception)
