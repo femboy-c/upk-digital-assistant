@@ -15,7 +15,8 @@
     .key { font-family: ui-monospace, monospace; font-weight: 600; }
     .url { color: #667085; font-size: 12px; word-break: break-all; }
     @media print {
-      body { background: #fff; margin: 8mm; }
+      @page { size: A4; margin: 8mm; }
+      body { background: #fff; margin: 0; }
       .grid { grid-template-columns: 1fr 1fr; }
       .card { break-inside: avoid; }
     }
@@ -23,14 +24,14 @@
 </head>
 <body>
   <h1>QR-коды помещений Колледжа ДГУ</h1>
-  <p class="muted">Базовый адрес: http://10.167.225.109:8000</p>
+  <p class="muted">Базовый адрес: https://stupid-falcon-15.loca.lt</p>
   <div class="grid">
         <article class="card">
           <h2>Актовый зал</h2>
           <p class="muted">1 этаж · Актовый зал</p>
           <img src="assembly-hall.png" alt="QR-код: Актовый зал">
           <p class="key">assembly-hall</p>
-          <p class="url">http://10.167.225.109:8000/?qr=assembly-hall</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=assembly-hall</p>
         </article>
 
         <article class="card">
@@ -38,7 +39,15 @@
           <p class="muted">1 этаж · Женская раздевалка</p>
           <img src="locker-women.png" alt="QR-код: Женская раздевалка">
           <p class="key">locker-women</p>
-          <p class="url">http://10.167.225.109:8000/?qr=locker-women</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=locker-women</p>
+        </article>
+
+        <article class="card">
+          <h2>Женский санузел</h2>
+          <p class="muted">1 этаж · Женский санузел</p>
+          <img src="floor1-women-toilet.png" alt="QR-код: Женский санузел">
+          <p class="key">floor1-women-toilet</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=floor1-women-toilet</p>
         </article>
 
         <article class="card">
@@ -46,7 +55,7 @@
           <p class="muted">1 этаж · Коридор 1 этажа</p>
           <img src="corridor-1.png" alt="QR-код: Коридор 1 этажа">
           <p class="key">corridor-1</p>
-          <p class="url">http://10.167.225.109:8000/?qr=corridor-1</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=corridor-1</p>
         </article>
 
         <article class="card">
@@ -54,7 +63,7 @@
           <p class="muted">1 этаж · Мужская раздевалка</p>
           <img src="locker-men.png" alt="QR-код: Мужская раздевалка">
           <p class="key">locker-men</p>
-          <p class="url">http://10.167.225.109:8000/?qr=locker-men</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=locker-men</p>
         </article>
 
         <article class="card">
@@ -62,7 +71,7 @@
           <p class="muted">1 этаж · Спортзал</p>
           <img src="gym.png" alt="QR-код: Спортзал">
           <p class="key">gym</p>
-          <p class="url">http://10.167.225.109:8000/?qr=gym</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=gym</p>
         </article>
 
         <article class="card">
@@ -70,7 +79,15 @@
           <p class="muted">1 этаж · Столовая</p>
           <img src="canteen.png" alt="QR-код: Столовая">
           <p class="key">canteen</p>
-          <p class="url">http://10.167.225.109:8000/?qr=canteen</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=canteen</p>
+        </article>
+
+        <article class="card">
+          <h2>УПК</h2>
+          <p class="muted">1 этаж · УПК</p>
+          <img src="upk.png" alt="QR-код: УПК">
+          <p class="key">upk</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=upk</p>
         </article>
 
         <article class="card">
@@ -78,7 +95,79 @@
           <p class="muted">1 этаж · каб. 101</p>
           <img src="lab101.png" alt="QR-код: 1 этаж, каб. 101">
           <p class="key">lab101</p>
-          <p class="url">http://10.167.225.109:8000/?qr=lab101</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=lab101</p>
+        </article>
+
+        <article class="card">
+          <h2>1 этаж, каб. 103</h2>
+          <p class="muted">1 этаж · каб. 103</p>
+          <img src="room103.png" alt="QR-код: 1 этаж, каб. 103">
+          <p class="key">room103</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room103</p>
+        </article>
+
+        <article class="card">
+          <h2>1 этаж, каб. 104</h2>
+          <p class="muted">1 этаж · каб. 104</p>
+          <img src="room104.png" alt="QR-код: 1 этаж, каб. 104">
+          <p class="key">room104</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room104</p>
+        </article>
+
+        <article class="card">
+          <h2>1 этаж, каб. 105</h2>
+          <p class="muted">1 этаж · каб. 105</p>
+          <img src="room105.png" alt="QR-код: 1 этаж, каб. 105">
+          <p class="key">room105</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room105</p>
+        </article>
+
+        <article class="card">
+          <h2>1 этаж, каб. 106</h2>
+          <p class="muted">1 этаж · каб. 106</p>
+          <img src="room106.png" alt="QR-код: 1 этаж, каб. 106">
+          <p class="key">room106</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room106</p>
+        </article>
+
+        <article class="card">
+          <h2>1 этаж, каб. 107к</h2>
+          <p class="muted">1 этаж · каб. 107к</p>
+          <img src="room107k.png" alt="QR-код: 1 этаж, каб. 107к">
+          <p class="key">room107k</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room107k</p>
+        </article>
+
+        <article class="card">
+          <h2>1 этаж, каб. 108</h2>
+          <p class="muted">1 этаж · каб. 108</p>
+          <img src="room108.png" alt="QR-код: 1 этаж, каб. 108">
+          <p class="key">room108</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room108</p>
+        </article>
+
+        <article class="card">
+          <h2>1 этаж, каб. 109</h2>
+          <p class="muted">1 этаж · каб. 109</p>
+          <img src="room109.png" alt="QR-код: 1 этаж, каб. 109">
+          <p class="key">room109</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room109</p>
+        </article>
+
+        <article class="card">
+          <h2>1 этаж, каб. 109а</h2>
+          <p class="muted">1 этаж · каб. 109а</p>
+          <img src="room109a.png" alt="QR-код: 1 этаж, каб. 109а">
+          <p class="key">room109a</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room109a</p>
+        </article>
+
+        <article class="card">
+          <h2>Кафедра математических и естественных дисциплин</h2>
+          <p class="muted">2 этаж · Кафедра математических и естественных дисциплин</p>
+          <img src="math-department.png" alt="QR-код: Кафедра математических и естественных дисциплин">
+          <p class="key">math-department</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=math-department</p>
         </article>
 
         <article class="card">
@@ -86,7 +175,111 @@
           <p class="muted">2 этаж · Коридор 2 этажа</p>
           <img src="corridor-2.png" alt="QR-код: Коридор 2 этажа">
           <p class="key">corridor-2</p>
-          <p class="url">http://10.167.225.109:8000/?qr=corridor-2</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=corridor-2</p>
+        </article>
+
+        <article class="card">
+          <h2>2 этаж, каб. 200</h2>
+          <p class="muted">2 этаж · каб. 200</p>
+          <img src="room200.png" alt="QR-код: 2 этаж, каб. 200">
+          <p class="key">room200</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room200</p>
+        </article>
+
+        <article class="card">
+          <h2>2 этаж, каб. 201</h2>
+          <p class="muted">2 этаж · каб. 201</p>
+          <img src="room201.png" alt="QR-код: 2 этаж, каб. 201">
+          <p class="key">room201</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room201</p>
+        </article>
+
+        <article class="card">
+          <h2>2 этаж, каб. 202</h2>
+          <p class="muted">2 этаж · каб. 202</p>
+          <img src="room202.png" alt="QR-код: 2 этаж, каб. 202">
+          <p class="key">room202</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room202</p>
+        </article>
+
+        <article class="card">
+          <h2>2 этаж, каб. 204</h2>
+          <p class="muted">2 этаж · каб. 204</p>
+          <img src="room204.png" alt="QR-код: 2 этаж, каб. 204">
+          <p class="key">room204</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room204</p>
+        </article>
+
+        <article class="card">
+          <h2>2 этаж, каб. 205</h2>
+          <p class="muted">2 этаж · каб. 205</p>
+          <img src="room205.png" alt="QR-код: 2 этаж, каб. 205">
+          <p class="key">room205</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room205</p>
+        </article>
+
+        <article class="card">
+          <h2>2 этаж, каб. 206</h2>
+          <p class="muted">2 этаж · каб. 206</p>
+          <img src="room206.png" alt="QR-код: 2 этаж, каб. 206">
+          <p class="key">room206</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room206</p>
+        </article>
+
+        <article class="card">
+          <h2>2 этаж, каб. 207</h2>
+          <p class="muted">2 этаж · каб. 207</p>
+          <img src="room207.png" alt="QR-код: 2 этаж, каб. 207">
+          <p class="key">room207</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room207</p>
+        </article>
+
+        <article class="card">
+          <h2>2 этаж, каб. 208</h2>
+          <p class="muted">2 этаж · каб. 208</p>
+          <img src="room208.png" alt="QR-код: 2 этаж, каб. 208">
+          <p class="key">room208</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room208</p>
+        </article>
+
+        <article class="card">
+          <h2>2 этаж, каб. 209(2)</h2>
+          <p class="muted">2 этаж · каб. 209(2)</p>
+          <img src="room209-2.png" alt="QR-код: 2 этаж, каб. 209(2)">
+          <p class="key">room209-2</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room209-2</p>
+        </article>
+
+        <article class="card">
+          <h2>2 этаж, каб. 210</h2>
+          <p class="muted">2 этаж · каб. 210</p>
+          <img src="room210.png" alt="QR-код: 2 этаж, каб. 210">
+          <p class="key">room210</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room210</p>
+        </article>
+
+        <article class="card">
+          <h2>2 этаж, каб. 211</h2>
+          <p class="muted">2 этаж · каб. 211</p>
+          <img src="room211.png" alt="QR-код: 2 этаж, каб. 211">
+          <p class="key">room211</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room211</p>
+        </article>
+
+        <article class="card">
+          <h2>2 этаж, каб. 212</h2>
+          <p class="muted">2 этаж · каб. 212</p>
+          <img src="room212.png" alt="QR-код: 2 этаж, каб. 212">
+          <p class="key">room212</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room212</p>
+        </article>
+
+        <article class="card">
+          <h2>2 этаж, каб. 213</h2>
+          <p class="muted">2 этаж · каб. 213</p>
+          <img src="room213.png" alt="QR-код: 2 этаж, каб. 213">
+          <p class="key">room213</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room213</p>
         </article>
 
         <article class="card">
@@ -94,7 +287,23 @@
           <p class="muted">2 этаж · каб. 214</p>
           <img src="room214.png" alt="QR-код: 2 этаж, каб. 214">
           <p class="key">room214</p>
-          <p class="url">http://10.167.225.109:8000/?qr=room214</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room214</p>
+        </article>
+
+        <article class="card">
+          <h2>2 этаж, каб. 215</h2>
+          <p class="muted">2 этаж · каб. 215</p>
+          <img src="room215.png" alt="QR-код: 2 этаж, каб. 215">
+          <p class="key">room215</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room215</p>
+        </article>
+
+        <article class="card">
+          <h2>2 этаж, каб. 216</h2>
+          <p class="muted">2 этаж · каб. 216</p>
+          <img src="room216.png" alt="QR-код: 2 этаж, каб. 216">
+          <p class="key">room216</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room216</p>
         </article>
 
         <article class="card">
@@ -102,7 +311,7 @@
           <p class="muted">3 этаж · Коридор 3 этажа</p>
           <img src="corridor-3.png" alt="QR-код: Коридор 3 этажа">
           <p class="key">corridor-3</p>
-          <p class="url">http://10.167.225.109:8000/?qr=corridor-3</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=corridor-3</p>
         </article>
 
         <article class="card">
@@ -110,7 +319,47 @@
           <p class="muted">3 этаж · Медпункт</p>
           <img src="medical.png" alt="QR-код: Медпункт">
           <p class="key">medical</p>
-          <p class="url">http://10.167.225.109:8000/?qr=medical</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=medical</p>
+        </article>
+
+        <article class="card">
+          <h2>3 этаж, каб. 301</h2>
+          <p class="muted">3 этаж · каб. 301</p>
+          <img src="room301.png" alt="QR-код: 3 этаж, каб. 301">
+          <p class="key">room301</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room301</p>
+        </article>
+
+        <article class="card">
+          <h2>3 этаж, каб. 302</h2>
+          <p class="muted">3 этаж · каб. 302</p>
+          <img src="room302.png" alt="QR-код: 3 этаж, каб. 302">
+          <p class="key">room302</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room302</p>
+        </article>
+
+        <article class="card">
+          <h2>3 этаж, каб. 303</h2>
+          <p class="muted">3 этаж · каб. 303</p>
+          <img src="room303.png" alt="QR-код: 3 этаж, каб. 303">
+          <p class="key">room303</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room303</p>
+        </article>
+
+        <article class="card">
+          <h2>3 этаж, каб. 303a</h2>
+          <p class="muted">3 этаж · каб. 303a</p>
+          <img src="room303a.png" alt="QR-код: 3 этаж, каб. 303a">
+          <p class="key">room303a</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room303a</p>
+        </article>
+
+        <article class="card">
+          <h2>3 этаж, каб. 304</h2>
+          <p class="muted">3 этаж · каб. 304</p>
+          <img src="room304.png" alt="QR-код: 3 этаж, каб. 304">
+          <p class="key">room304</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room304</p>
         </article>
 
         <article class="card">
@@ -118,7 +367,71 @@
           <p class="muted">3 этаж · каб. 305</p>
           <img src="room305.png" alt="QR-код: 3 этаж, каб. 305">
           <p class="key">room305</p>
-          <p class="url">http://10.167.225.109:8000/?qr=room305</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room305</p>
+        </article>
+
+        <article class="card">
+          <h2>3 этаж, каб. 306</h2>
+          <p class="muted">3 этаж · каб. 306</p>
+          <img src="room306.png" alt="QR-код: 3 этаж, каб. 306">
+          <p class="key">room306</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room306</p>
+        </article>
+
+        <article class="card">
+          <h2>3 этаж, каб. 307</h2>
+          <p class="muted">3 этаж · каб. 307</p>
+          <img src="room307.png" alt="QR-код: 3 этаж, каб. 307">
+          <p class="key">room307</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room307</p>
+        </article>
+
+        <article class="card">
+          <h2>3 этаж, каб. 307a</h2>
+          <p class="muted">3 этаж · каб. 307a</p>
+          <img src="room307a.png" alt="QR-код: 3 этаж, каб. 307a">
+          <p class="key">room307a</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room307a</p>
+        </article>
+
+        <article class="card">
+          <h2>3 этаж, каб. 308</h2>
+          <p class="muted">3 этаж · каб. 308</p>
+          <img src="room308.png" alt="QR-код: 3 этаж, каб. 308">
+          <p class="key">room308</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room308</p>
+        </article>
+
+        <article class="card">
+          <h2>3 этаж, каб. 309</h2>
+          <p class="muted">3 этаж · каб. 309</p>
+          <img src="room309.png" alt="QR-код: 3 этаж, каб. 309">
+          <p class="key">room309</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room309</p>
+        </article>
+
+        <article class="card">
+          <h2>3 этаж, каб. 311</h2>
+          <p class="muted">3 этаж · каб. 311</p>
+          <img src="room311.png" alt="QR-код: 3 этаж, каб. 311">
+          <p class="key">room311</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room311</p>
+        </article>
+
+        <article class="card">
+          <h2>3 этаж, каб. 316</h2>
+          <p class="muted">3 этаж · каб. 316</p>
+          <img src="room316.png" alt="QR-код: 3 этаж, каб. 316">
+          <p class="key">room316</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room316</p>
+        </article>
+
+        <article class="card">
+          <h2>3 этаж, каб. 317</h2>
+          <p class="muted">3 этаж · каб. 317</p>
+          <img src="room317.png" alt="QR-код: 3 этаж, каб. 317">
+          <p class="key">room317</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=room317</p>
         </article>
 
         <article class="card">
@@ -126,7 +439,7 @@
           <p class="muted">Задний двор · Задний двор</p>
           <img src="yard-back.png" alt="QR-код: Задний двор">
           <p class="key">yard-back</p>
-          <p class="url">http://10.167.225.109:8000/?qr=yard-back</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=yard-back</p>
         </article>
 
         <article class="card">
@@ -134,7 +447,7 @@
           <p class="muted">Задний двор · Задний двор: женский санузел</p>
           <img src="yard-back-women.png" alt="QR-код: Задний двор: женский санузел">
           <p class="key">yard-back-women</p>
-          <p class="url">http://10.167.225.109:8000/?qr=yard-back-women</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=yard-back-women</p>
         </article>
 
         <article class="card">
@@ -142,7 +455,7 @@
           <p class="muted">Задний двор · Задний двор: мужской санузел</p>
           <img src="yard-back-men.png" alt="QR-код: Задний двор: мужской санузел">
           <p class="key">yard-back-men</p>
-          <p class="url">http://10.167.225.109:8000/?qr=yard-back-men</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=yard-back-men</p>
         </article>
 
         <article class="card">
@@ -150,7 +463,7 @@
           <p class="muted">Передний двор · Передний двор</p>
           <img src="yard-front.png" alt="QR-код: Передний двор">
           <p class="key">yard-front</p>
-          <p class="url">http://10.167.225.109:8000/?qr=yard-front</p>
+          <p class="url">https://stupid-falcon-15.loca.lt/?qr=yard-front</p>
         </article>
   </div>
 </body>

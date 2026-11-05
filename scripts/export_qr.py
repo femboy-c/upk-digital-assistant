@@ -55,7 +55,8 @@ def build_page(rows: list[dict], base_url: str) -> str:
     .key {{ font-family: ui-monospace, monospace; font-weight: 600; }}
     .url {{ color: #667085; font-size: 12px; word-break: break-all; }}
     @media print {{
-      body {{ background: #fff; margin: 8mm; }}
+      @page {{ size: A4; margin: 8mm; }}
+      body {{ background: #fff; margin: 0; }}
       .grid {{ grid-template-columns: 1fr 1fr; }}
       .card {{ break-inside: avoid; }}
     }}
