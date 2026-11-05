@@ -41,6 +41,48 @@ LOCATIONS = [
     ("yard-back", "", "Задний двор", "yard-back"),
     ("yard-back", "", "Задний двор: женский санузел", "yard-back-women"),
     ("yard-back", "", "Задний двор: мужской санузел", "yard-back-men"),
+    # 1 этаж
+    ("1", "103", "", "room103"),
+    ("1", "104", "", "room104"),
+    ("1", "105", "", "room105"),
+    ("1", "106", "", "room106"),
+    ("1", "107к", "", "room107k"),
+    ("1", "108", "", "room108"),
+    ("1", "109", "", "room109"),
+    ("1", "109а", "", "room109a"),
+    ("1", "", "УПК", "upk"),
+    ("1", "", "Женский санузел", "floor1-women-toilet"),
+    # 2 этаж
+    ("2", "200", "", "room200"),
+    ("2", "201", "", "room201"),
+    ("2", "202", "", "room202"),
+    ("2", "204", "", "room204"),
+    ("2", "205", "", "room205"),
+    ("2", "206", "", "room206"),
+    ("2", "207", "", "room207"),
+    ("2", "208", "", "room208"),
+    ("2", "209(2)", "", "room209-2"),
+    ("2", "210", "", "room210"),
+    ("2", "211", "", "room211"),
+    ("2", "212", "", "room212"),
+    ("2", "213", "", "room213"),
+    ("2", "215", "", "room215"),
+    ("2", "216", "", "room216"),
+    ("2", "", "Кафедра математических и естественных дисциплин", "math-department"),
+    # 3 этаж (305 уже есть выше)
+    ("3", "301", "", "room301"),
+    ("3", "302", "", "room302"),
+    ("3", "303", "", "room303"),
+    ("3", "303a", "", "room303a"),
+    ("3", "304", "", "room304"),
+    ("3", "306", "", "room306"),
+    ("3", "307", "", "room307"),
+    ("3", "307a", "", "room307a"),
+    ("3", "308", "", "room308"),
+    ("3", "309", "", "room309"),
+    ("3", "311", "", "room311"),
+    ("3", "316", "", "room316"),
+    ("3", "317", "", "room317"),
 ]
 
 USERS = [
@@ -140,17 +182,13 @@ def seed_database(db: Session) -> None:
         for name, description in CATEGORIES:
             db.add(Category(name=name, description=description))
 
-    # В пустую базу добавляем весь каталог. В уже работающую — только новые
-    # коридоры, чтобы не возвращать удалённые или переименованные помещения.
-    if db.scalar(select(Location).limit(1)) is None:
-        for floor, room, zone_name, qr_key in LOCATIONS:
+    # В пустую базу добавляем весь каталог. В уже работающую — все недостающие
+    # помещения из каталога: так новые кабинеты появляются после обновления.
+    existing_keys = set(db.scalars(select(Location.qr_key)).all())
+    for floor, room, zone_name, qr_key in LOCATIONS:
+        if qr_key not in existing_keys:
             db.add(Location(floor=floor, room=room, zone_name=zone_name, qr_key=qr_key))
-    else:
-        existing_keys = set(db.scalars(select(Location.qr_key)).all())
-        for floor, room, zone_name, qr_key in LOCATIONS:
-            if qr_key.startswith("corridor-") and qr_key not in existing_keys:
-                db.add(Location(floor=floor, room=room, zone_name=zone_name, qr_key=qr_key))
-                existing_keys.add(qr_key)
+            existing_keys.add(qr_key)
     db.flush()
 
     # Убираем устаревшую «Общую зону: холл 1 этажа». Заявки, если они были,

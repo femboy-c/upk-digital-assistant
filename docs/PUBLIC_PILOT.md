@@ -105,7 +105,7 @@ journalctl --user -u upk-localtunnel -n 20
 
 Схема `data/upk.db` дополнена колонками `tickets.merged_into_id` и MFA-полями
 `users.totp_*`, создана таблица `banner`. Миграция выполняется автоматически
-при старте. Тесты: **162 passed**.
+при старте. Тесты: **164 passed**.
 
 ## Остановка пилота
 
