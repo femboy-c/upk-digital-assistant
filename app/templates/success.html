@@ -41,7 +41,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
   try { localStorage.removeItem("upk-report-draft-v1"); } catch (error) {}
 })();

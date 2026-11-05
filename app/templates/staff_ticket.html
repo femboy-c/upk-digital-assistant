@@ -93,7 +93,7 @@
             <p class="similar-text">{{ candidate.description[:200] }}{% if candidate.description|length > 200 %}…{% endif %}</p>
             {% if user.role == "admin" %}
               <form method="post" action="/staff/ticket/{{ ticket.id }}/merge" class="inline-form"
-                    onsubmit="return confirm('Присоединить {{ ticket.public_number }} к {{ candidate.public_number }}? Вложения и описание перейдут в основную заявку.');">
+                    data-confirm="Присоединить {{ ticket.public_number }} к {{ candidate.public_number }}? Вложения и описание перейдут в основную заявку.">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
                 <input type="hidden" name="target_id" value="{{ candidate.id }}">
                 <button class="btn btn-ghost btn-small" type="submit">Присоединить к {{ candidate.public_number }}</button>
@@ -261,7 +261,7 @@
     безвозвратно. Восстановить их можно только из резервной копии.
   </p>
   <form method="post" action="/staff/ticket/{{ ticket.id }}/delete"
-        onsubmit="return confirm('Удалить заявку {{ ticket.public_number }} безвозвратно?');">
+        data-confirm="Удалить заявку {{ ticket.public_number }} безвозвратно?">
     <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
     <button class="btn btn-danger" type="submit">Удалить заявку навсегда</button>
   </form>
@@ -270,7 +270,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
   const note = document.getElementById("note");
   const status = document.getElementById("status");

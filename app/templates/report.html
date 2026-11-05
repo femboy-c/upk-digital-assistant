@@ -182,7 +182,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
   const floor = document.getElementById("floor");
   const location = document.getElementById("location_id");

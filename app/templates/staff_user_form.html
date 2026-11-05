@@ -67,7 +67,7 @@
       В остальных случаях используйте отключение учётной записи.
     </p>
     <form method="post" action="/staff/users/{{ target.id }}/delete"
-          onsubmit="return confirm('Удалить пользователя @{{ target.login }}? Это действие необратимо.');">
+          data-confirm="Удалить пользователя @{{ target.login }}? Это действие необратимо.">
       <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
       <button class="btn btn-danger" type="submit">Удалить пользователя</button>
     </form>

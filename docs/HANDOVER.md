@@ -17,7 +17,7 @@
 - **Путь:** `/home/mamai/upk`.
 - **Стек:** Python 3.15.2, FastAPI, SQLite, SQLAlchemy, Jinja2, qrcode, Pillow.
 - **GitHub:** приватный репозиторий `femboy-c/upk-digital-assistant`, ветка `main`.
-- **Тесты:** `138 passed`.
+- **Тесты:** `149 passed`.
 - **Сервер:** uvicorn на `127.0.0.1:8000`, публично — через временный
   HTTPS-туннель Cloudflare.
 - **Адреса:**
@@ -66,7 +66,7 @@ cd /home/mamai/upk
 Ожидается:
 
 ```text
-138 passed
+149 passed
 ```
 
 Бэкап перед изменениями:
@@ -275,9 +275,18 @@ cd /home/mamai/upk
 
 ### Безопасность
 - CSRF на всех изменяющих формах.
-- Ограничение попыток входа: 5 за 10 минут.
-- Заголовки CSP, `X-Frame-Options`, `nosniff`, `Referrer-Policy`, HSTS при HTTPS.
-- Noindex и `robots.txt` для `/staff`, `/login`, `/track`, `/t/`, `/success`, `/assistant`.
+- Ограничение попыток входа: 5 за 10 минут на реальный IP (`CF-Connecting-IP`
+  за Cloudflare, затем `X-Forwarded-For`).
+- Пароли: PBKDF2-HMAC-SHA256, 600 000 итераций; старые хеши обновляются при входе.
+- Для несуществующего логина тоже считается PBKDF2 — нельзя определить логин
+  по времени ответа.
+- CSP с одноразовым nonce: `script-src` без `unsafe-inline`; inline-обработчики
+  `onsubmit`/`onclick` убраны.
+- Заголовки `X-Frame-Options`, `nosniff`, `Referrer-Policy`, COOP, CORP,
+  `X-Permitted-Cross-Domain-Policies`, HSTS при HTTPS.
+- Noindex и `robots.txt` для `/staff`, `/login`, `/track`, `/my`, `/t/`,
+  `/success`, `/assistant`.
+- Перебор кодов отслеживания: 30 попыток в минуту с IP.
 - `PRAGMA foreign_keys=ON`.
 - Закрытые вложения и проверка изображения.
 - Лимит хранилища 200 МБ, один файл до 5 МБ.
@@ -288,6 +297,8 @@ cd /home/mamai/upk
 - `Cache-Control: no-store` для закрытых страниц.
 - Токены отслеживания редактируются в access-log uvicorn.
 - В production отключены `/docs`, `/redoc`, `/openapi.json`.
+- Версии зависимостей зафиксированы; `pip-audit` не находит известных
+  уязвимостей (см. `docs/SECURITY.md`).
 - База, вложения и бэкапы закрыты правами `600`, каталоги — `700`.
 - Согласие на обработку ПДн фиксируется в заявке (дата и версия политики).
 - Закрытые заявки и контакты хранятся `TICKET_RETENTION_DAYS` (по умолчанию
@@ -342,6 +353,13 @@ cd /home/mamai/upk
 41. Добавлены поиск похожих заявок и объединение дублей администратором.
 42. Добавлен личный кабинет `/my` со списком заявок текущего браузера.
 43. Добавлены SLA-подсветка просроченных заявок и массовые действия.
+44. CSP переведён на nonce, убран `unsafe-inline` для скриптов и inline-обработчики.
+45. PBKDF2 усилен до 600 000 итераций, старые хеши обновляются при входе.
+46. Лимит входа считает реальный IP за Cloudflare, добавлена защита от
+    перечисления логинов по времени.
+47. Добавлен лимит перебора кодов отслеживания и `noindex`/`no-store` для `/my`.
+48. Версии зависимостей зафиксированы, `pip-audit` добавлен в dev-зависимости;
+    создан `docs/SECURITY.md`.
 
 ## 8. Важное про сервер
 
@@ -389,8 +407,10 @@ curl -s 'http://127.0.0.1:8000/?qr=room214' | grep -A20 '<select id="floor">'
 - `test_my_tickets.py` — личный список заявок в браузере.
 - `test_sla_bulk.py` — SLA, просроченные заявки и массовые действия.
 - `test_seo.py` — заголовки, canonical, sitemap, robots и мобильный вход.
+- `test_security_hardening.py` — CSP nonce, заголовки, IP за прокси,
+  пересчёт старых хешей паролей.
 
-Всего 138 тестов. Они используют отдельную временную БД и не меняют `data/upk.db`.
+Всего 149 тестов. Они используют отдельную временную БД и не меняют `data/upk.db`.
 
 ## 10. Ограничения и что осталось
 
@@ -488,6 +508,7 @@ curl -s 'http://127.0.0.1:8000/?qr=room214' | grep -A20 '<select id="floor">'
 - `docs/NEXT_AI_PROMPT.txt` — короткий готовый промпт для следующей ИИ.
 - `docs/PUBLIC_PILOT.md` — публичный пилот на временном туннеле.
 - `docs/SEO.md` — домен, Яндекс.Вебмастер, Google Search Console и sitemap.
+- `docs/SECURITY.md` — аудит, CSP, пароли, зависимости и чек-лист.
 
 ## 14. Готовый промпт для следующей модели
 
@@ -497,7 +518,7 @@ curl -s 'http://127.0.0.1:8000/?qr=room214' | grep -A20 '<select id="floor">'
 Путь: /home/mamai/upk
 Стек: Python 3.15.2, FastAPI, SQLite, SQLAlchemy, Jinja2, qrcode, Pillow.
 Запуск: cd /home/mamai/upk && .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
-Проверка: .venv/bin/pytest -q (сейчас 138 passed)
+Проверка: .venv/bin/pytest -q (сейчас 149 passed)
 Режим: APP_ENV=production. Демо-учётка staff отключена, пароль admin заменён
 на случайный (не хранится в репозитории). Не возвращать admin/admin123.
 Публичный адрес: https://kitty-consistent-cgi-notified.trycloudflare.com
@@ -533,7 +554,7 @@ docs/PUBLIC_PILOT.md). Постоянного домена нет.
 - CSRF, rate limit, honeypot, закрытые вложения, лимиты текста, noindex;
 - лимит HTTP-запроса, потоковые загрузки, отзыв сессий, `no-store`,
   редактирование токенов в логах, закрытая API-документация в production;
-- 138 автотестов.
+- 149 автотестов.
 
 Ближайшие задачи (согласовать с пользователем):
 1. Постоянный домен + именованный туннель Cloudflare.
@@ -552,7 +573,7 @@ docs/PUBLIC_PILOT.md). Постоянного домена нет.
 
 После любых изменений:
 1. .venv/bin/python scripts/backup.py (если меняются данные/схема)
-2. .venv/bin/pytest -q → должно быть 138+ passed
+2. .venv/bin/pytest -q → должно быть 149+ passed
 3. Перезапустить uvicorn, если менялись .py-файлы.
 ```
 
@@ -566,7 +587,7 @@ cd /home/mamai/upk
 Ожидается:
 
 ```text
-138 passed
+149 passed
 ```
 
 Проверить сервер:

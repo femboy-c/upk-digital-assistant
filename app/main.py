@@ -7,6 +7,7 @@
 """
 import logging
 import os
+import secrets
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -38,14 +39,35 @@ if IS_PRODUCTION and (not SECRET_KEY or SECRET_KEY == DEV_SECRET_KEY):
         "Для APP_ENV=production задайте собственный SECRET_KEY в .env. "
         "Демонстрационный ключ использовать нельзя."
     )
+if IS_PRODUCTION and len(SECRET_KEY) < 32:
+    raise RuntimeError(
+        "Для APP_ENV=production SECRET_KEY должен быть не короче 32 символов."
+    )
 
 SESSION_HTTPS_ONLY = os.getenv("SESSION_HTTPS_ONLY", "0").lower() in ("1", "true", "yes")
+if IS_PRODUCTION and not SESSION_HTTPS_ONLY:
+    raise RuntimeError(
+        "Для APP_ENV=production включите SESSION_HTTPS_ONLY=1: "
+        "cookie сессии должна передаваться только по HTTPS."
+    )
+if IS_PRODUCTION and PUBLIC_BASE_URL and not PUBLIC_BASE_URL.startswith("https://"):
+    raise RuntimeError(
+        "Для APP_ENV=production PUBLIC_BASE_URL должен начинаться с https://."
+    )
 
 # Страницы с закрытыми данными не должны попадать в поисковые системы.
-NOINDEX_PREFIXES = ("/staff", "/login", "/track", "/t/", "/success", "/assistant")
+NOINDEX_PREFIXES = (
+    "/staff",
+    "/login",
+    "/track",
+    "/my",
+    "/t/",
+    "/success",
+    "/assistant",
+)
 
 # Эти страницы содержат персональные данные и не должны кешироваться.
-NO_STORE_PREFIXES = ("/staff", "/login", "/track", "/t/", "/success")
+NO_STORE_PREFIXES = ("/staff", "/login", "/track", "/my", "/t/", "/success")
 
 install_log_redaction()
 
@@ -82,20 +104,38 @@ app.add_middleware(RequestBodyLimitMiddleware, max_bytes=MAX_REQUEST_BODY_BYTES)
 
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
-    """Базовые защитные заголовки для браузера."""
+    """Базовые защитные заголовки для браузера.
+
+    Для inline-скриптов выдаётся одноразовый nonce. Без него CSP не разрешает
+    выполнение сторонних и внедрённых скриптов.
+    """
+    nonce = secrets.token_urlsafe(16)
+    request.state.csp_nonce = nonce
     response = await call_next(request)
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "no-referrer")
+    response.headers.setdefault("X-Permitted-Cross-Domain-Policies", "none")
+    response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+    response.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
     response.headers.setdefault(
         "Permissions-Policy",
         "geolocation=(), microphone=(), camera=()",
     )
     response.headers.setdefault(
         "Content-Security-Policy",
-        "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; "
-        "script-src 'self' 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; "
-        "frame-src 'none'; object-src 'none'; base-uri 'self'",
+        "default-src 'self'; "
+        "img-src 'self' data:; "
+        "style-src 'self' 'unsafe-inline'; "
+        f"script-src 'self' 'nonce-{nonce}'; "
+        "connect-src 'self'; "
+        "form-action 'self'; "
+        "frame-ancestors 'none'; "
+        "frame-src 'none'; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "worker-src 'none'; "
+        "manifest-src 'self'",
     )
     if SESSION_HTTPS_ONLY or PUBLIC_BASE_URL.startswith("https://"):
         response.headers.setdefault(

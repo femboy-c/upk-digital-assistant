@@ -42,6 +42,7 @@ def _navigation_context(request: Request) -> dict:
         "site_description": SITE_DESCRIPTION,
         "yandex_verification": YANDEX_VERIFICATION,
         "google_verification": GOOGLE_VERIFICATION,
+        "csp_nonce": getattr(request.state, "csp_nonce", ""),
     }
 
 

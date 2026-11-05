@@ -38,9 +38,11 @@ from ..models import (
 from ..parsing import as_int
 from ..sla import age_hours, is_overdue, overdue_hours, target_hours
 from ..security import (
+    DUMMY_PASSWORD_HASH,
     current_user,
     hash_password,
     login_is_blocked,
+    needs_rehash,
     register_login_failure,
     require_csrf,
     reset_login_failures,
@@ -86,13 +88,14 @@ def login(
         )
 
     user = db.scalar(select(User).where(User.login == login.strip()))
+    # Для несуществующего логина всё равно считаем PBKDF2, иначе по времени
+    # ответа можно перебором узнать, какие логины зарегистрированы.
+    password_hash = user.password_hash if user is not None else DUMMY_PASSWORD_HASH
+    password_ok = verify_password(password, password_hash)
+
     # Отключённая учётная запись получает такое же нейтральное сообщение,
     # чтобы нельзя было перебором узнать, существует ли пользователь.
-    if (
-        user is None
-        or not verify_password(password, user.password_hash)
-        or not user.is_active
-    ):
+    if user is None or not password_ok or not user.is_active:
         register_login_failure(request, login)
         return templates.TemplateResponse(
             request=request,
@@ -102,6 +105,15 @@ def login(
         )
 
     reset_login_failures(request, login)
+    if needs_rehash(user.password_hash):
+        # Старый хеш (200 000 итераций) обновляем до актуального при входе.
+        try:
+            user.password_hash = hash_password(password)
+            db.commit()
+        except SQLAlchemyError:
+            db.rollback()
+            logger.exception("Не удалось обновить хеш пароля пользователя id=%s", user.id)
+
     request.session["user_id"] = user.id
     request.session["user_version"] = user.session_version
     return RedirectResponse("/staff", status_code=303)

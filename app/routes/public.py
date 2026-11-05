@@ -71,6 +71,10 @@ PHOTO_SUFFIX = ".jpg"
 # Это удобство для текущего браузера, а не замена секретной ссылке.
 MY_TICKETS_KEY = "my_tickets"
 MAX_MY_TICKETS = 20
+
+# Защита от перебора кодов отслеживания.
+TRACK_RATE_LIMIT = 30
+TRACK_RATE_WINDOW_SECONDS = 60
 PHONE_RE = re.compile(r"^[0-9+()\-\s]{5,40}$")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -469,6 +473,15 @@ def success(request: Request, number: str = "", token: str = ""):
     )
 
 
+def _track_rate_limited(request: Request) -> bool:
+    """Слишком много попыток открыть заявку по коду с одного IP."""
+    return is_limited(
+        f"track:{client_ip(request)}",
+        TRACK_RATE_LIMIT,
+        TRACK_RATE_WINDOW_SECONDS,
+    )
+
+
 def _ticket_by_token(db: Session, token: str) -> Ticket | None:
     """Находит заявку по ссылке и проверяет срок её действия/отзыв."""
     if not token:
@@ -505,6 +518,15 @@ def _forget_ticket(request: Request, token: str) -> None:
 @router.get("/t/{token}", response_class=HTMLResponse)
 def track_by_link(request: Request, token: str, db: Session = Depends(get_db)):
     """Отслеживание по секретной ссылке."""
+    if _track_rate_limited(request):
+        return templates.TemplateResponse(
+            request=request,
+            name="track_missing.html",
+            context={"error": "Слишком много запросов. Подождите минуту и попробуйте снова."},
+            status_code=429,
+        )
+    register_event(f"track:{client_ip(request)}", TRACK_RATE_WINDOW_SECONDS)
+
     ticket = _ticket_by_token(db, token)
     if ticket is None:
         return templates.TemplateResponse(
@@ -521,6 +543,15 @@ def track_by_link(request: Request, token: str, db: Session = Depends(get_db)):
 def track_form(request: Request, number: str = "", token: str = "", db: Session = Depends(get_db)):
     """Отслеживание по номеру + токену из ссылки."""
     if number and token:
+        if _track_rate_limited(request):
+            return templates.TemplateResponse(
+                request=request,
+                name="track_missing.html",
+                context={"error": "Слишком много запросов. Подождите минуту и попробуйте снова."},
+                status_code=429,
+            )
+        register_event(f"track:{client_ip(request)}", TRACK_RATE_WINDOW_SECONDS)
+
         ticket = db.scalar(
             select(Ticket).where(
                 Ticket.public_number == number.strip(),

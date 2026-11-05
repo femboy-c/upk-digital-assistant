@@ -32,7 +32,7 @@
     </ul>
 
     <form method="post" action="/my/clear"
-          onsubmit="return confirm('Убрать все заявки из списка в этом браузере? Сами заявки останутся у сотрудников.');">
+          data-confirm="Убрать все заявки из списка в этом браузере? Сами заявки останутся у сотрудников.">
       <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
       <button class="btn btn-ghost btn-small" type="submit">Очистить список</button>
     </form>

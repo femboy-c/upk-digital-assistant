@@ -174,7 +174,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
   const form = document.getElementById("bulk-form");
   if (!form) return;

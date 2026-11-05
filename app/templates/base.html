@@ -20,7 +20,7 @@
   {% if google_verification %}
     <meta name="google-site-verification" content="{{ google_verification }}">
   {% endif %}
-  <script type="application/ld+json">
+  <script type="application/ld+json" nonce="{{ csp_nonce }}">
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -34,7 +34,7 @@
     }
   }
   </script>
-  <script>
+  <script nonce="{{ csp_nonce }}">
   (function () {
     var saved = null;
     try { saved = localStorage.getItem("upk-theme"); } catch (error) {}
@@ -45,6 +45,7 @@
   {% if request.url.path == "/login"
         or request.url.path.startswith("/staff")
         or request.url.path.startswith("/track")
+        or request.url.path.startswith("/my")
         or request.url.path.startswith("/t/")
         or request.url.path.startswith("/success") %}
     <meta name="robots" content="noindex, nofollow">
@@ -121,7 +122,7 @@
     <a href="/privacy">Политика обработки персональных данных</a>
   </footer>
 
-  <script>
+  <script nonce="{{ csp_nonce }}">
   (function () {
     const menu = document.querySelector(".account-menu");
     if (!menu) return;
@@ -135,7 +136,7 @@
   })();
   </script>
 
-  <script>
+  <script nonce="{{ csp_nonce }}">
   (function () {
     const root = document.documentElement;
     const button = document.getElementById("theme-toggle");
@@ -170,6 +171,19 @@
     else if (media.addListener) media.addListener(followSystem);
 
     updateLabel();
+  })();
+  </script>
+
+  <script nonce="{{ csp_nonce }}">
+  (function () {
+    document.querySelectorAll("form[data-confirm]").forEach(function (form) {
+      form.addEventListener("submit", function (event) {
+        if (!window.confirm(form.dataset.confirm)) event.preventDefault();
+      });
+    });
+    document.querySelectorAll("[data-print]").forEach(function (button) {
+      button.addEventListener("click", function () { window.print(); });
+    });
   })();
   </script>
 

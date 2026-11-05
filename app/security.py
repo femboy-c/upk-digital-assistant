@@ -17,9 +17,15 @@ from sqlalchemy.orm import Session
 
 from .database import get_db
 from .models import User
+from .ratelimit import client_ip
 
 # Сколько раз "перемешиваем" пароль. Чем больше — тем медленнее подобрать.
-PBKDF2_ROUNDS = 200_000
+# 600 000 — актуальная рекомендация OWASP для PBKDF2-HMAC-SHA256.
+PBKDF2_ROUNDS = 600_000
+# Старые хеши без версии использовали 200 000 итераций. Их продолжаем
+# принимать и автоматически пересчитываем при следующем входе.
+LEGACY_PBKDF2_ROUNDS = 200_000
+HASH_PREFIX = "pbkdf2_sha256"
 
 CSRF_SESSION_KEY = "_csrf_token"
 LOGIN_MAX_ATTEMPTS = 5
@@ -32,20 +38,37 @@ _login_failures: dict[str, list[float]] = defaultdict(list)
 
 
 def hash_password(password: str) -> str:
-    """Превращает пароль в необратимый хеш вида 'соль$хеш'."""
+    """Превращает пароль в необратимый хеш с версией и числом итераций."""
     salt = secrets.token_hex(16)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), PBKDF2_ROUNDS)
-    return f"{salt}${digest.hex()}"
+    return f"{HASH_PREFIX}${PBKDF2_ROUNDS}${salt}${digest.hex()}"
 
 
 def verify_password(password: str, stored: str) -> bool:
-    """Проверяет, подходит ли введённый пароль к сохранённому хешу."""
+    """Проверяет пароль и поддерживает старый формат хеша."""
     try:
-        salt, expected = stored.split("$", 1)
-    except ValueError:
+        parts = stored.split("$")
+        if len(parts) == 4 and parts[0] == HASH_PREFIX:
+            rounds = int(parts[1])
+            # Защита от подмены числа итераций в базе на огромное значение.
+            if not 1000 <= rounds <= 2_000_000:
+                return False
+            salt, expected = parts[2], parts[3]
+        elif len(parts) == 2:
+            rounds = LEGACY_PBKDF2_ROUNDS
+            salt, expected = parts
+        else:
+            return False
+    except (ValueError, TypeError):
         return False
-    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), PBKDF2_ROUNDS)
+
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), rounds)
     return hmac.compare_digest(digest.hex(), expected)
+
+
+def needs_rehash(stored: str) -> bool:
+    """Нужно ли пересчитать старый или ослабленный хеш."""
+    return not stored.startswith(f"{HASH_PREFIX}${PBKDF2_ROUNDS}$")
 
 
 def new_tracking_token() -> str:
@@ -118,9 +141,15 @@ def require_csrf(request: Request, token: str) -> None:
         )
 
 
+# Хеш-заглушка: проверяется даже для несуществующего логина, чтобы время
+# ответа не выдавало, зарегистрирован пользователь или нет.
+DUMMY_PASSWORD_HASH = hash_password(secrets.token_urlsafe(16))
+
+
 def _login_key(request: Request, login: str) -> str:
-    host = request.client.host if request.client else "unknown"
-    return f"{host}:{login.strip().lower()}"
+    # За Cloudflare реальный IP приходит в X-Forwarded-For. Если брать
+    # request.client.host, все пользователи получат один общий лимит.
+    return f"{client_ip(request)}:{login.strip().lower()}"
 
 
 def login_is_blocked(request: Request, login: str) -> bool:
@@ -134,8 +163,19 @@ def login_is_blocked(request: Request, login: str) -> bool:
 
 def register_login_failure(request: Request, login: str) -> None:
     """Запоминает неудачную попытку входа."""
+    now = time.monotonic()
     key = _login_key(request, login)
-    _login_failures[key].append(time.monotonic())
+    _login_failures[key].append(now)
+
+    # Не даём словарю расти бесконечно при переборе разных логинов.
+    if len(_login_failures) > 5000:
+        cutoff = now - LOGIN_WINDOW_SECONDS
+        for old_key in list(_login_failures):
+            recent = [moment for moment in _login_failures[old_key] if moment >= cutoff]
+            if recent:
+                _login_failures[old_key] = recent
+            else:
+                _login_failures.pop(old_key, None)
 
 
 def reset_login_failures(request: Request, login: str) -> None:
