@@ -17,7 +17,7 @@ nohup .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 \
 mkdir -p ~/.config/systemd/user
 cp deploy/systemd-user/*.service deploy/systemd-user/*.timer ~/.config/systemd/user/
 systemctl --user daemon-reload
-systemctl --user enable --now upk.service upk-tunnel.service
+systemctl --user enable --now upk.service upk-localtunnel.service
 systemctl --user enable --now upk-backup.timer upk-cleanup.timer
 loginctl enable-linger "$USER"
 ```
@@ -25,12 +25,12 @@ loginctl enable-linger "$USER"
 Проверка:
 
 ```bash
-systemctl --user status upk.service upk-tunnel.service
+systemctl --user status upk.service upk-localtunnel.service
 systemctl --user list-timers
-journalctl --user -u upk-tunnel -n 30
+journalctl --user -u upk-localtunnel -n 30
 ```
 
-Quick Tunnel меняет адрес при перезапуске. После смены адреса обновите
+localtunnel меняет адрес при перезапуске. После смены адреса обновите
 `PUBLIC_BASE_URL` в `.env` и перезапустите `upk.service`. Для стабильного
 адреса нужен домен и именованный туннель.
 

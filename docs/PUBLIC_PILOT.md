@@ -1,13 +1,15 @@
-# Публичный пилот: временный туннель Cloudflare
+# Публичный пилот: временный туннель
 
-Дата запуска: 5 ноября 2026 года, 03:35 (локальное время).
+Дата запуска: 5 ноября 2026 года.
 
 ## Статус
 
 - Режим: `APP_ENV=production`.
 - Приложение: `127.0.0.1:8000`, наружу не слушает.
-- Публичный HTTPS: `https://kitty-consistent-cgi-notified.trycloudflare.com`
-- Туннель: `cloudflared` Quick Tunnel, бесплатный и **временный**.
+- Публичный HTTPS: `https://stupid-falcon-15.loca.lt`
+- Туннель: `localtunnel` (резервный вариант). Cloudflare Quick Tunnel в этой
+  сети рвёт соединение с edge каждые несколько минут, поэтому оставлен как
+  запасной, а публичный доступ идёт через localtunnel.
 - Домена и постоянного адреса нет.
 
 Проверено снаружи:
@@ -35,34 +37,34 @@
 ## Как это запущено сейчас
 
 ```bash
-cd /home/mamai/upk
-nohup .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 \
-  > /tmp/opencode/upk-uvicorn.log 2>&1 &
-
-nohup ~/.local/bin/cloudflared tunnel --url http://127.0.0.1:8000 --no-autoupdate \
-  > /tmp/opencode/upk-tunnel.log 2>&1 &
+systemctl --user start upk.service upk-localtunnel.service
 ```
 
-`cloudflared` установлен в `~/.local/bin/cloudflared` (без sudo).
+Юниты лежат в `deploy/systemd-user/`. `cloudflared` установлен в
+`~/.local/bin/cloudflared` (без sudo), но его quick tunnel в этой сети
+нестабилен.
+
+Если localtunnel перезапустился и адрес изменился:
+
+```bash
+journalctl --user -u upk-localtunnel -n 20
+# обновить PUBLIC_BASE_URL в .env и перезапустить upk.service
+```
 
 ## Ограничения пилота
 
-- Адрес `*.trycloudflare.com` меняется при каждом перезапуске туннеля.
+- Адрес `*.loca.lt` меняется при каждом перезапуске туннеля.
 - QR-коды в `docs/qr/` по-прежнему ведут на локальный адрес
   `http://10.167.225.109:8000`. Перегенерировать их имеет смысл только после
   получения постоянного домена.
-- После перезагрузки компьютера процессы нужно запускать снова; автозапуска нет.
-- Это не постоянный публичный запуск: нет домена, нет автозапуска, нет
-  стабильных QR. Для постоянного запуска нужен домен и именованный туннель
-  Cloudflare (или VPS + Caddy).
-- На `*.trycloudflare.com` Cloudflare подменяет `/robots.txt` своим файлом,
-  поэтому правила из приложения там не отдаются. Заголовки `X-Robots-Tag`
-  на закрытых страницах при этом работают. На своём домене `/robots.txt`
-  будет отдаваться приложением.
-- Найти сайт в Яндексе или Google по запросу «жалобы ДГУ» с временного адреса
-  нельзя: поисковики не индексируют случайный `*.trycloudflare.com`, который
-  меняется при перезапуске. Для поиска нужен постоянный домен и регистрация
-  в Вебмастере — см. `docs/SEO.md`.
+- Это не постоянный публичный запуск: нет домена и стабильных QR. Для
+  постоянного запуска нужен домен и именованный туннель Cloudflare
+  (или VPS + Caddy).
+- localtunnel отдаёт свои заголовки `X-Robots-Tag: noindex`, поэтому поиск
+  в Яндексе/Google с него невозможен. Для поиска нужен постоянный домен и
+  регистрация в Вебмастере — см. `docs/SEO.md`.
+- localtunnel — сторонний сервис: он терминирует HTTPS и видит трафик.
+  Для реальных персональных данных используйте только домен + свой прокси.
 - Прямой вход по `http://127.0.0.1:8000` после включения
   `SESSION_HTTPS_ONLY=1` не сохраняет сессию: для входа используйте публичный
   HTTPS-адрес.
@@ -108,8 +110,7 @@ nohup ~/.local/bin/cloudflared tunnel --url http://127.0.0.1:8000 --no-autoupdat
 ## Остановка пилота
 
 ```bash
-fuser -k 8000/tcp
-pkill -x cloudflared
+systemctl --user stop upk-localtunnel.service upk.service
 ```
 
 Не использовать `pkill -f "uvicorn app.main:app"`.

@@ -1,10 +1,10 @@
 Ты продолжаешь проект «Цифровой помощник Колледжа ДГУ».
 
 ОБНОВЛЕНИЕ 05.11.2026: сайт уже запущен в режиме публичного пилота через
-временный туннель Cloudflare. Читай docs/PUBLIC_PILOT.md. Состояние ниже
+временный туннель localtunnel. Читай docs/PUBLIC_PILOT.md. Состояние ниже
 обновлено: APP_ENV=production, пароль admin заменён, staff отключён,
-uvicorn слушает 127.0.0.1:8000. Публичный адрес временный
-(*.trycloudflare.com) и меняется при перезапуске.
+uvicorn слушает 127.0.0.1:8000. Публичный адрес временный (*.loca.lt)
+и меняется при перезапуске; Cloudflare Quick Tunnel в этой сети нестабилен.
 
 Путь: /home/mamai/upk
 Стек: Python 3.15.2, FastAPI, SQLite, SQLAlchemy, Jinja2, qrcode, Pillow.
@@ -16,20 +16,20 @@ uvicorn слушает 127.0.0.1:8000. Публичный адрес време�
 
 ТЕКУЩИЙ РЕЖИМ РАБОТЫ:
 - APP_ENV=production, uvicorn слушает только 127.0.0.1:8000;
-- публичный HTTPS: https://kitty-consistent-cgi-notified.trycloudflare.com
-  (временный quick tunnel cloudflared; меняется при перезапуске);
+- публичный HTTPS: https://stupid-falcon-15.loca.lt
+  (временный localtunnel; меняется при перезапуске);
 - постоянного домена и автозапуска нет;
 - поиска в Яндексе/Google пока нет: временный адрес не индексируется.
   Для поиска нужен домен + Вебмастер, см. docs/SEO.md;
 - .env: SESSION_HTTPS_ONLY=1, TRUST_PROXY=1, MAX_REQUEST_BODY_MB=30;
 - прямой вход по http://127.0.0.1:8000 не сохраняет сессию — нужен публичный
   HTTPS-адрес;
-- после перезагрузки uvicorn и cloudflared запускать вручную.
+- после перезагрузки проверить `upk.service` и `upk-localtunnel.service`.
 
 ЗАПУСК:
 cd /home/mamai/upk
 .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
-nohup ~/.local/bin/cloudflared tunnel --url http://127.0.0.1:8000 --no-autoupdate > /tmp/opencode/upk-tunnel.log 2>&1 &
+systemctl --user start upk.service upk-localtunnel.service
 
 Если порт занят:
 fuser -k 8000/tcp

@@ -2,12 +2,12 @@
 
 ## Почему сейчас сайт не находится по запросу «жалобы ДГУ»
 
-Публичный адрес сейчас — `https://kitty-consistent-cgi-notified.trycloudflare.com`.
-Это временный Quick Tunnel Cloudflare:
+Публичный адрес сейчас — `https://stupid-falcon-15.loca.lt`.
+Это временный туннель localtunnel (Cloudflare Quick Tunnel в этой сети
+нестабилен):
 
 - адрес случайный и меняется при перезапуске;
-- поисковики не видят в нём постоянного сайта;
-- Cloudflare на `*.trycloudflare.com` подменяет `/robots.txt` своим файлом;
+- localtunnel отдаёт `X-Robots-Tag: noindex`, поэтому поисковики не увидят сайт;
 - сайт не добавлен в Яндекс.Вебмастер и Google Search Console.
 
 Пока адрес меняется, индексация бессмысленна: через день поиск будет вести на

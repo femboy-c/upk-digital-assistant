@@ -3,8 +3,8 @@
 Дата передачи: 5 ноября 2026 года.
 
 > **Обновление 5 ноября 2026, 03:35.** Сайт запущен в режиме публичного пилота
-> через временный туннель Cloudflare:
-> `https://kitty-consistent-cgi-notified.trycloudflare.com`.
+> через временный туннель localtunnel:
+> `https://stupid-falcon-15.loca.lt`.
 > Подробности — `docs/PUBLIC_PILOT.md`. Разделы ниже про «только локальная сеть»
 > и демо-доступ `staff/staff123`, `admin/admin123` **устарели**: включён
 > `APP_ENV=production`, демо-пароль администратора заменён, учётная запись
@@ -19,10 +19,10 @@
 - **GitHub:** приватный репозиторий `femboy-c/upk-digital-assistant`, ветка `main`.
 - **Тесты:** `162 passed`.
 - **Сервер:** uvicorn на `127.0.0.1:8000`, публично — через временный
-  HTTPS-туннель Cloudflare.
+  HTTPS-туннель localtunnel (Cloudflare Quick Tunnel в этой сети нестабилен).
 - **Адреса:**
   - компьютер: `http://127.0.0.1:8000`
-  - публично: `https://kitty-consistent-cgi-notified.trycloudflare.com`
+  - публично: `https://stupid-falcon-15.loca.lt`
   - проверка: `/health`
 
 Основной сценарий:
@@ -32,16 +32,13 @@
 ## 2. Запуск, тесты, бэкап
 
 ```bash
-cd /home/mamai/upk
-.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
-nohup ~/.local/bin/cloudflared tunnel --url http://127.0.0.1:8000 --no-autoupdate \
-  > /tmp/opencode/upk-tunnel.log 2>&1 &
+systemctl --user start upk.service upk-localtunnel.service
 ```
 
-Адрес туннеля смотрите в логе:
+Адрес туннеля смотрите в журнале:
 
 ```bash
-grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' /tmp/opencode/upk-tunnel.log | head -1
+journalctl --user -u upk-localtunnel -n 20
 ```
 
 Если порт занят:
@@ -52,9 +49,10 @@ fuser -k 8000/tcp
 
 Не использовать `pkill -f "uvicorn app.main:app"` — можно убить свою оболочку.
 
-Сейчас uvicorn и cloudflared запускаются вручную. Systemd-сервис `upk-https`
-удалён вместе с локальным HTTPS. После перезагрузки компьютера оба процесса
-нужно запустить снова; адрес туннеля при этом изменится.
+Сейчас uvicorn и localtunnel запускаются через systemd-юниты пользователя.
+Systemd-сервис `upk-https` удалён вместе с локальным HTTPS. После перезагрузки
+проверьте `upk.service` и `upk-localtunnel.service`; адрес туннеля при
+перезапуске может измениться.
 
 Тесты:
 
@@ -358,7 +356,8 @@ cd /home/mamai/upk
 36. Определён срок хранения данных и добавлен скрипт очистки старых заявок.
 37. Локальный HTTPS (порт 8443, локальный CA, systemd-сервис) был настроен, затем
     по просьбе пользователя полностью откатан.
-38. Запущен публичный пилот через временный туннель Cloudflare; включён
+38. Запущен публичный пилот через временный туннель (localtunnel; Cloudflare
+    Quick Tunnel в этой сети нестабилен); включён
     production-режим, демо-пароли отключены.
 39. Добавлены подсказки формы, примеры, черновик, превью фото, копирование
     ссылки и визуальный прогресс статуса.
@@ -464,9 +463,8 @@ MFA, баннер, уведомления Telegram/email, Redis-лимиты, Cl
 
 Публичный доступ:
 
-- сайт запущен в режиме публичного пилота через временный туннель Cloudflare
-  `https://kitty-consistent-cgi-notified.trycloudflare.com` (см.
-  `docs/PUBLIC_PILOT.md`);
+- сайт запущен в режиме публичного пилота через временный туннель localtunnel
+  `https://stupid-falcon-15.loca.lt` (см. `docs/PUBLIC_PILOT.md`);
 - включён `APP_ENV=production`, uvicorn слушает только `127.0.0.1:8000`;
 - домена и постоянного адреса нет; адрес туннеля меняется при перезапуске;
 - для постоянного запуска нужен домен + именованный туннель Cloudflare либо
@@ -515,7 +513,7 @@ MFA, баннер, уведомления Telegram/email, Redis-лимиты, Cl
 - Не запускать тесты на реальной базе: они используют временную БД.
 - Не публиковать uvicorn-порт (8000) напрямую в интернет без HTTPS-прокси
   и ограничения доступа.
-- Текущий публичный адрес — временный туннель Cloudflare, а не постоянный
+- Текущий публичный адрес — временный туннель localtunnel, а не постоянный
   домен. Не печатать QR под него и не считать его финальным.
 - Демо-пароли уже отключены: `staff` деактивирован, пароль `admin` заменён.
   Не возвращать `staff/staff123` и `admin/admin123`.
@@ -550,8 +548,8 @@ MFA, баннер, уведомления Telegram/email, Redis-лимиты, Cl
 Проверка: .venv/bin/pytest -q (сейчас 162 passed)
 Режим: APP_ENV=production. Демо-учётка staff отключена, пароль admin заменён
 на случайный (не хранится в репозитории). Не возвращать admin/admin123.
-Публичный адрес: https://kitty-consistent-cgi-notified.trycloudflare.com
-(временный туннель cloudflared, меняется при перезапуске; см.
+Публичный адрес: https://stupid-falcon-15.loca.lt
+(временный туннель localtunnel, меняется при перезапуске; см.
 docs/PUBLIC_PILOT.md). Постоянного домена нет.
 Локально uvicorn слушает только 127.0.0.1:8000; вход по прямому HTTP
 не сохраняет сессию из-за SESSION_HTTPS_ONLY=1.

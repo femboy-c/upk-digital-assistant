@@ -1,0 +1,15 @@
+[Unit]
+Description=UPK: публичный туннель localtunnel (резервный)
+After=network-online.target upk.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/upk
+Environment=PATH=%h/.local/share/mise/installs/node/26.8.2/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/.local/share/mise/installs/node/26.8.2/bin/npx --yes localtunnel --port 8000 --subdomain upk-dgu
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
