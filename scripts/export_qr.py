@@ -130,7 +130,7 @@ def main() -> None:
 
     print(f"Готово: {len(rows)} QR-кодов в {out_dir}")
     print(f"Базовый адрес: {base_url}")
-    print("Для смартфона запустите с --base-url https://IP-компьютера:8443")
+    print("Для смартфона запустите с --base-url http://IP-компьютера:8000")
 
 
 if __name__ == "__main__":
