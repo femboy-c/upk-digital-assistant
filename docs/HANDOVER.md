@@ -127,7 +127,7 @@ cd /home/mamai/upk
 ├── data/upk.db              рабочая база
 ├── data/uploads/            закрытые вложения
 ├── docs/                    документация и эта передача
-├── docs/qr/                 готовые PNG QR, index.html, qr-codes.csv
+├── docs/qr/                 PNG QR, index.html, qr-codes.csv, qr-codes.pdf
 ├── deploy/                  примеры Caddy и systemd
 ├── scripts/                 QR, пользователи, бэкапы, сертификаты, очистка
 ├── tests/                   pytest
