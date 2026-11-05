@@ -2,7 +2,7 @@
 
 ## Почему сейчас сайт не находится по запросу «жалобы ДГУ»
 
-Публичный адрес сейчас — `https://stupid-falcon-15.loca.lt`.
+Публичный адрес сейчас — `https://unlucky-eagle-38.loca.lt`.
 Это временный туннель localtunnel (Cloudflare Quick Tunnel в этой сети
 нестабилен):
 

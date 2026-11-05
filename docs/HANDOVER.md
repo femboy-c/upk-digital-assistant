@@ -4,7 +4,7 @@
 
 > **Обновление 5 ноября 2026, 03:35.** Сайт запущен в режиме публичного пилота
 > через временный туннель localtunnel:
-> `https://stupid-falcon-15.loca.lt`.
+> `https://unlucky-eagle-38.loca.lt`.
 > Подробности — `docs/PUBLIC_PILOT.md`. Разделы ниже про «только локальная сеть»
 > и демо-доступ `staff/staff123`, `admin/admin123` **устарели**: включён
 > `APP_ENV=production`, демо-пароль администратора заменён, учётная запись
@@ -22,7 +22,7 @@
   HTTPS-туннель localtunnel (Cloudflare Quick Tunnel в этой сети нестабилен).
 - **Адреса:**
   - компьютер: `http://127.0.0.1:8000`
-  - публично: `https://stupid-falcon-15.loca.lt`
+  - публично: `https://unlucky-eagle-38.loca.lt`
   - проверка: `/health`
 
 Основной сценарий:
@@ -467,7 +467,7 @@ MFA, баннер, уведомления Telegram/email, Redis-лимиты, Cl
 Публичный доступ:
 
 - сайт запущен в режиме публичного пилота через временный туннель localtunnel
-  `https://stupid-falcon-15.loca.lt` (см. `docs/PUBLIC_PILOT.md`);
+  `https://unlucky-eagle-38.loca.lt` (см. `docs/PUBLIC_PILOT.md`);
 - включён `APP_ENV=production`, uvicorn слушает только `127.0.0.1:8000`;
 - домена и постоянного адреса нет; адрес туннеля меняется при перезапуске;
 - для постоянного запуска нужен домен + именованный туннель Cloudflare либо
@@ -551,7 +551,7 @@ MFA, баннер, уведомления Telegram/email, Redis-лимиты, Cl
 Проверка: .venv/bin/pytest -q (сейчас 164 passed)
 Режим: APP_ENV=production. Демо-учётка staff отключена, пароль admin заменён
 на случайный (не хранится в репозитории). Не возвращать admin/admin123.
-Публичный адрес: https://stupid-falcon-15.loca.lt
+Публичный адрес: https://unlucky-eagle-38.loca.lt
 (временный туннель localtunnel, меняется при перезапуске; см.
 docs/PUBLIC_PILOT.md). Постоянного домена нет.
 Локально uvicorn слушает только 127.0.0.1:8000; вход по прямому HTTP

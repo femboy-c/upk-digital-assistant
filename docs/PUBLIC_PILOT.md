@@ -6,7 +6,7 @@
 
 - Режим: `APP_ENV=production`.
 - Приложение: `127.0.0.1:8000`, наружу не слушает.
-- Публичный HTTPS: `https://stupid-falcon-15.loca.lt`
+- Публичный HTTPS: `https://unlucky-eagle-38.loca.lt`
 - Туннель: `localtunnel` (резервный вариант). Cloudflare Quick Tunnel в этой
   сети рвёт соединение с edge каждые несколько минут, поэтому оставлен как
   запасной, а публичный доступ идёт через localtunnel.
