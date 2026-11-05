@@ -59,3 +59,7 @@ def ensure_schema(target_engine: Engine | None = None) -> None:
             connection.exec_driver_sql(
                 "ALTER TABLE tickets ADD COLUMN consent_version VARCHAR(20) DEFAULT ''"
             )
+        if "merged_into_id" not in ticket_columns:
+            connection.exec_driver_sql(
+                "ALTER TABLE tickets ADD COLUMN merged_into_id INTEGER"
+            )

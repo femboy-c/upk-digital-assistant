@@ -5,6 +5,25 @@
 <h1>Сообщить о проблеме</h1>
 <p class="lead">Цифровой помощник Колледжа ДГУ. Опишите, что случилось, — мы зарегистрируем заявку и передадим её сотруднику колледжа.</p>
 
+<section class="card how-it-works" aria-labelledby="how-it-works-title">
+  <h2 id="how-it-works-title">Как это работает</h2>
+  <ol class="how-steps">
+    <li>
+      <span class="how-num" aria-hidden="true">1</span>
+      <div><strong>Опишите проблему</strong><p>Укажите место и что именно случилось. Фотография поможет быстрее разобраться.</p></div>
+    </li>
+    <li>
+      <span class="how-num" aria-hidden="true">2</span>
+      <div><strong>Получите номер</strong><p>После отправки вы увидите номер заявки и секретную ссылку для отслеживания.</p></div>
+    </li>
+    <li>
+      <span class="how-num" aria-hidden="true">3</span>
+      <div><strong>Следите за статусом</strong><p>По ссылке видно, на каком этапе заявка и что написали сотрудники.</p></div>
+    </li>
+  </ol>
+  <p class="hint">Обычно заявку рассматривают в течение рабочего дня. Если ситуация опасна для людей — звоните 112.</p>
+</section>
+
 {% if qr_error %}
   <div class="alert alert-warn">{{ qr_error }}</div>
 {% endif %}
@@ -22,12 +41,11 @@
 <section class="card assistant" id="assistant">
   <div class="row-between">
     <h2>Помощник перед отправкой</h2>
-    <span class="badge">демонстрация</span>
   </div>
   <p class="hint">
     Проверьте описание до отправки: помощник отличит типовой вопрос, неисправность,
-    опасную ситуацию или скажет, что данных недостаточно.
-    Это демонстрационная имитация ИИ: ответы строятся по правилам и базе знаний колледжа.
+    опасную ситуацию или скажет, что данных недостаточно. Ответы строятся по правилам
+    и базе знаний колледжа и не заменяют саму заявку.
   </p>
   <button type="button" class="btn btn-ghost" id="assistant-check">Проверить текст</button>
 
@@ -60,7 +78,20 @@
 
   <label for="description">Что случилось?</label>
   <textarea id="description" name="description" rows="4" required maxlength="{{ max_description_length }}"
+            aria-describedby="description-meta"
             placeholder="Например: в кабинете 214 не работает проектор">{{ description or "" }}</textarea>
+  <div class="field-meta" id="description-meta">
+    <span class="hint">Минимум {{ min_description_length }} символов</span>
+    <span class="hint" aria-live="polite"><span id="description-count">0</span> / {{ max_description_length }}</span>
+  </div>
+  <div class="examples" aria-label="Примеры описания проблемы">
+    <span class="muted">Примеры:</span>
+    <button type="button" class="chip" data-example="В кабинете 214 не работает проектор, изображения нет.">Не работает проектор</button>
+    <button type="button" class="chip" data-example="В коридоре 2 этажа перегорела лампа, вечером там темно.">Перегорела лампа</button>
+    <button type="button" class="chip" data-example="В мужском санузле во дворе протекает кран, на полу вода.">Протекает кран</button>
+    <button type="button" class="chip" data-example="В столовой сломана дверца шкафа, она держится на одной петле.">Сломана мебель</button>
+  </div>
+  <p class="hint" id="draft-restored" hidden>Черновик восстановлен — можно продолжить с того же места.</p>
 
   <div class="grid-2">
     <div>
@@ -123,8 +154,11 @@
     </div>
   </div>
 
-  <label for="photo">Фотография (необязательно, до 5 МБ)</label>
-  <input id="photo" type="file" name="photo" accept="image/jpeg,image/png,image/webp">
+  <label for="photo">Фотографии (необязательно, до {{ max_photos_per_ticket }} штук)</label>
+  <input id="photo" type="file" name="photos" accept="image/jpeg,image/png,image/webp" multiple>
+  <p class="hint">JPG, PNG или WEBP, каждая до 5 МБ. Фото увидит только сотрудник колледжа.</p>
+  <div class="photo-preview-grid" id="photo-preview" hidden></div>
+  <p class="alert alert-error" id="photo-error" hidden></p>
 
   <label class="checkbox-row consent-row" for="personal_data_consent">
     <input id="personal_data_consent" name="personal_data_consent" type="checkbox"
@@ -135,7 +169,10 @@
     </span>
   </label>
 
-  <button class="btn btn-primary" type="submit">Отправить заявку</button>
+  <div class="submit-row">
+    <button class="btn btn-primary" type="submit">Отправить заявку</button>
+    <span class="hint">Обычно рассматриваем в течение рабочего дня.</span>
+  </div>
   <p class="hint">После отправки вы получите номер заявки и ссылку для отслеживания статуса.</p>
 </form>
 {% endblock %}
@@ -300,6 +337,147 @@
     if (!button || button.disabled) return;
     button.disabled = true;
     button.textContent = "Отправляем…";
+  });
+})();
+
+(function () {
+  const description = document.getElementById("description");
+  const count = document.getElementById("description-count");
+  if (!description) return;
+
+  function updateCount() {
+    if (count) count.textContent = String(description.value.length);
+  }
+
+  description.addEventListener("input", updateCount);
+  updateCount();
+
+  document.querySelectorAll("[data-example]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      description.value = button.dataset.example || "";
+      description.focus();
+      description.dispatchEvent(new Event("input"));
+    });
+  });
+})();
+
+(function () {
+  const form = document.getElementById("report-form");
+  const description = document.getElementById("description");
+  if (!form || !description) return;
+
+  const key = "upk-report-draft-v1";
+  const phone = document.getElementById("contact_phone");
+  const email = document.getElementById("contact_email");
+  const category = document.getElementById("category_id");
+  const restored = document.getElementById("draft-restored");
+  let timer = null;
+
+  function save() {
+    try {
+      localStorage.setItem(key, JSON.stringify({
+        description: description.value,
+        phone: phone ? phone.value : "",
+        email: email ? email.value : "",
+        category: category ? category.value : ""
+      }));
+    } catch (error) {}
+  }
+
+  function scheduleSave() {
+    clearTimeout(timer);
+    timer = setTimeout(save, 300);
+  }
+
+  const serverFilled = description.value.trim()
+    || (phone && phone.value.trim())
+    || (email && email.value.trim())
+    || (category && category.value);
+
+  if (!serverFilled) {
+    try {
+      const draft = JSON.parse(localStorage.getItem(key) || "null");
+      if (draft) {
+        if (draft.description) description.value = draft.description;
+        if (phone && draft.phone) phone.value = draft.phone;
+        if (email && draft.email) email.value = draft.email;
+        if (category && draft.category) category.value = draft.category;
+        if (restored && (draft.description || draft.phone || draft.email)) restored.hidden = false;
+      }
+    } catch (error) {}
+  }
+
+  [description, phone, email, category].forEach(function (field) {
+    if (!field) return;
+    field.addEventListener("input", scheduleSave);
+    field.addEventListener("change", scheduleSave);
+  });
+  description.dispatchEvent(new Event("input"));
+})();
+
+(function () {
+  const input = document.getElementById("photo");
+  const preview = document.getElementById("photo-preview");
+  const error = document.getElementById("photo-error");
+  if (!input || !preview || !error) return;
+
+  const allowed = ["image/jpeg", "image/png", "image/webp"];
+  const maxBytes = 5 * 1024 * 1024;
+  const maxFiles = {{ max_photos_per_ticket }};
+  let previewUrls = [];
+
+  function clearPreviews() {
+    previewUrls.forEach(function (url) { URL.revokeObjectURL(url); });
+    previewUrls = [];
+    preview.textContent = "";
+    preview.hidden = true;
+  }
+
+  function fail(message) {
+    clearPreviews();
+    error.textContent = message;
+    error.hidden = false;
+    input.value = "";
+  }
+
+  input.addEventListener("change", function () {
+    error.hidden = true;
+    clearPreviews();
+
+    const files = Array.from(input.files || []);
+    if (!files.length) return;
+
+    if (files.length > maxFiles) {
+      fail("Можно прикрепить не больше " + maxFiles + " фотографий.");
+      return;
+    }
+
+    for (let index = 0; index < files.length; index += 1) {
+      const file = files[index];
+      if (allowed.indexOf(file.type) === -1) {
+        fail("Можно прикрепить только JPG, PNG или WEBP.");
+        return;
+      }
+      if (file.size > maxBytes) {
+        fail("Каждая фотография должна быть не больше 5 МБ.");
+        return;
+      }
+    }
+
+    files.forEach(function (file, index) {
+      const figure = document.createElement("figure");
+      const image = document.createElement("img");
+      const caption = document.createElement("figcaption");
+      const url = URL.createObjectURL(file);
+      previewUrls.push(url);
+      image.src = url;
+      image.alt = "Фотография " + (index + 1);
+      caption.textContent = "Фото " + (index + 1);
+      figure.appendChild(image);
+      figure.appendChild(caption);
+      preview.appendChild(figure);
+    });
+    preview.hidden = false;
   });
 })();
 </script>

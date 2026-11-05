@@ -91,10 +91,11 @@ def test_assistant_does_not_create_or_close_tickets(client: TestClient):
         assert db.execute(select(Ticket.id, Ticket.status)).all() == statuses_before
 
 
-def test_disclaimer_states_demo_imitation(client: TestClient):
+def test_disclaimer_explains_rules_without_demo_label(client: TestClient):
     data = analyze(client, "Как проверить статус заявки?")
-    assert "Демонстрационная имитация ИИ" in data["disclaimer"]
+    assert "по правилам и проверенной базе знаний" in data["disclaimer"]
+    assert "демонстрационн" not in data["disclaimer"].lower()
 
     page = client.get("/")
-    assert "демонстрационная имитация ии" in page.text.lower()
+    assert "демонстрационн" not in page.text.lower()
     assert "Проверить текст" in page.text

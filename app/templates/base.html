@@ -36,6 +36,7 @@
     <nav class="nav">
       <a href="/faq">Частые вопросы</a>
       <a href="/track">Проверить заявку</a>
+      <a href="/my">Мои заявки{% if my_tickets_count %} <span class="nav-count">{{ my_tickets_count }}</span>{% endif %}</a>
 
       <button class="theme-toggle" id="theme-toggle" type="button"
               aria-label="Переключить тему" title="Переключить тему">
@@ -85,7 +86,7 @@
 
   <footer class="footer">
     Колледж Дагестанского государственного университета · Цифровой помощник ·
-    демонстрационная версия · <a href="/privacy">Политика обработки персональных данных</a>
+    <a href="/privacy">Политика обработки персональных данных</a>
   </footer>
 
   <script>

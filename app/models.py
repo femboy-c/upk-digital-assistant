@@ -108,6 +108,10 @@ class Ticket(Base):
     # Срок жизни ссылки и отметка об отзыве. None = бессрочно / не отозвана.
     tracking_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     tracking_revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Если заявка — дубль, здесь номер основной заявки, с которой её объединили.
+    merged_into_id: Mapped[int | None] = mapped_column(
+        ForeignKey("tickets.id"), nullable=True
+    )
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now)

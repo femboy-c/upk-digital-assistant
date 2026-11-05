@@ -3,6 +3,7 @@
 
 {% block content %}
 <a class="back" href="/">← На главную</a>
+<a class="back" href="/my" style="margin-left: 14px;">Мои заявки</a>
 
 <div class="card">
   <div class="row-between">
@@ -11,10 +12,42 @@
   </div>
 
   <p class="muted">Создана {{ ticket.created_at.strftime("%d.%m.%Y в %H:%M") }}
+    {% if history %}
+      · обновлена {{ history[-1].created_at.strftime("%d.%m.%Y в %H:%M") }}
+    {% endif %}
     {% if ticket.tracking_expires_at %}
       · ссылка действует до {{ ticket.tracking_expires_at.strftime("%d.%m.%Y") }}
     {% endif %}
   </p>
+
+  {% if merged_into %}
+    <div class="alert alert-info">
+      Эта заявка объединена с обращением №{{ merged_into.public_number }}.
+      Сотрудники работают с общей заявкой — статус и комментарии будут там.
+    </div>
+  {% elif ticket.status == "Отклонена" %}
+    <div class="alert alert-warn">
+      Заявка отклонена. Если проблема осталась, отправьте новую заявку или
+      свяжитесь с сотрудником колледжа.
+    </div>
+  {% else %}
+    <ol class="status-steps" aria-label="Этапы заявки">
+      {% for step in status_steps %}
+        <li class="{% if loop.index0 < status_step %}done{% elif loop.index0 == status_step %}current{% endif %}"
+            {% if loop.index0 == status_step %}aria-current="step"{% endif %}>
+          <span class="step-dot" aria-hidden="true"></span>
+          <span>{{ step }}</span>
+        </li>
+      {% endfor %}
+    </ol>
+    {% if ticket.status == "Нужны уточнения" %}
+      <div class="alert alert-warn">
+        Сотруднику нужны уточнения по заявке — проверьте комментарии ниже.
+      </div>
+    {% elif ticket.status == "Решена" %}
+      <div class="alert alert-ok">Проблема отмечена как решённая. Спасибо за обращение!</div>
+    {% endif %}
+  {% endif %}
 
   <dl class="details">
     <dt>Описание</dt><dd>{{ ticket.description }}</dd>
@@ -29,6 +62,8 @@
       {% for a in attachments %}
         <li>
           <a href="/t/{{ token }}/attachment/{{ a.id }}" target="_blank" rel="noopener">
+            <img class="attachment-thumb" src="/t/{{ token }}/attachment/{{ a.id }}"
+                 alt="Фото {{ loop.index }}" loading="lazy">
             Фото {{ loop.index }}
           </a>
           <span class="muted">{{ a.created_at.strftime("%d.%m.%Y %H:%M") }}</span>

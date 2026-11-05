@@ -16,6 +16,21 @@
   <p class="muted">Создана {{ ticket.created_at.strftime("%d.%m.%Y в %H:%M") }} ·
      обновлена {{ ticket.updated_at.strftime("%d.%m.%Y %H:%M") }}</p>
 
+  {% if merged_into %}
+    <div class="alert alert-warn">
+      Заявка объединена с
+      <a href="/staff/ticket/{{ merged_into.id }}">{{ merged_into.public_number }}</a>.
+      Дальнейшая работа ведётся в основной заявке.
+    </div>
+  {% endif %}
+
+  {% if ticket_overdue %}
+    <div class="alert alert-error">
+      Заявка просрочена по SLA на {{ ticket_overdue_hours }} ч.
+      Норматив для приоритета «{{ ticket.priority }}» — {{ ticket_sla_hours }} ч.
+    </div>
+  {% endif %}
+
   <dl class="details">
     <dt>Описание</dt><dd>{{ ticket.description }}</dd>
     <dt>Место</dt><dd>{{ ticket.location.title if ticket.location else "—" }}</dd>
@@ -49,12 +64,48 @@
       {% for a in attachments %}
         <li>
           <a href="/staff/attachment/{{ a.id }}" target="_blank" rel="noopener">
+            <img class="attachment-thumb" src="/staff/attachment/{{ a.id }}"
+                 alt="Фото {{ loop.index }}" loading="lazy">
             Фото {{ loop.index }}
           </a>
           <span class="muted">{{ a.created_at.strftime("%d.%m.%Y %H:%M") }}</span>
         </li>
       {% endfor %}
     </ul>
+  {% endif %}
+
+  {% if similar_tickets and not merged_into %}
+    <section class="merge-box">
+      <h2 class="section-title">Похожие заявки</h2>
+      <p class="hint">Открытые заявки в этом же помещении с похожим описанием. Проверьте, не дубль ли это.</p>
+      <ul class="similar-list">
+        {% for candidate, score in similar_tickets %}
+          <li>
+            <div class="similar-head">
+              <a href="/staff/ticket/{{ candidate.id }}"><strong>{{ candidate.public_number }}</strong></a>
+              <span class="badge" data-status="{{ candidate.status }}">{{ candidate.status }}</span>
+              <span class="muted">совпадение {{ (score * 100)|round|int }}%</span>
+            </div>
+            <p class="hint">
+              {{ candidate.created_at.strftime("%d.%m.%Y %H:%M") }}
+              {% if candidate.location %}· {{ candidate.location.title }}{% endif %}
+            </p>
+            <p class="similar-text">{{ candidate.description[:200] }}{% if candidate.description|length > 200 %}…{% endif %}</p>
+            {% if user.role == "admin" %}
+              <form method="post" action="/staff/ticket/{{ ticket.id }}/merge" class="inline-form"
+                    onsubmit="return confirm('Присоединить {{ ticket.public_number }} к {{ candidate.public_number }}? Вложения и описание перейдут в основную заявку.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                <input type="hidden" name="target_id" value="{{ candidate.id }}">
+                <button class="btn btn-ghost btn-small" type="submit">Присоединить к {{ candidate.public_number }}</button>
+              </form>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+      {% if user.role != "admin" %}
+        <p class="hint">Объединять заявки может только администратор.</p>
+      {% endif %}
+    </section>
   {% endif %}
 </div>
 

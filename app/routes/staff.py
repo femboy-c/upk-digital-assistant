@@ -22,6 +22,7 @@ from ..config import (
     UPLOAD_DIR,
 )
 from ..database import get_db
+from ..duplicates import FINAL_STATUSES, find_similar_tickets
 from ..filters import build_ticket_filters
 from ..models import (
     Attachment,
@@ -35,6 +36,7 @@ from ..models import (
     User,
 )
 from ..parsing import as_int
+from ..sla import age_hours, is_overdue, overdue_hours, target_hours
 from ..security import (
     current_user,
     hash_password,
@@ -173,8 +175,12 @@ def staff_list(
     location_id: str = "",
     date_from: str = "",
     date_to: str = "",
+    overdue: str = "",
     page: str = "",
     deleted: str = "",
+    bulk_updated: str = "",
+    bulk_skipped: str = "",
+    bulk_error: str = "",
     db: Session = Depends(get_db),
 ):
     user = current_user(request, db)
@@ -196,22 +202,39 @@ def staff_list(
         date_to=date_to,
     )
 
-    total = db.scalar(select(func.count(Ticket.id)).where(*conditions)) or 0
-    pages = max(1, (total + STAFF_PAGE_SIZE - 1) // STAFF_PAGE_SIZE)
-    if page_number > pages:
-        page_number = pages
-
+    overdue_only = overdue.strip().lower() in ("1", "true", "on", "yes")
     query = select(Ticket)
     if conditions:
         query = query.where(*conditions)
-    tickets = db.scalars(
-        query.order_by(Ticket.created_at.desc())
-        .offset((page_number - 1) * STAFF_PAGE_SIZE)
-        .limit(STAFF_PAGE_SIZE)
-    ).all()
+
+    if overdue_only:
+        # Просрочка зависит от приоритета и статуса, поэтому считаем в Python
+        # и уже потом режем на страницы. Для колледжа объём заявок небольшой.
+        matching = db.scalars(query.order_by(Ticket.created_at.desc())).all()
+        matching = [ticket for ticket in matching if is_overdue(ticket)]
+        total = len(matching)
+        pages = max(1, (total + STAFF_PAGE_SIZE - 1) // STAFF_PAGE_SIZE)
+        if page_number > pages:
+            page_number = pages
+        start = (page_number - 1) * STAFF_PAGE_SIZE
+        tickets = matching[start:start + STAFF_PAGE_SIZE]
+    else:
+        total = db.scalar(select(func.count(Ticket.id)).where(*conditions)) or 0
+        pages = max(1, (total + STAFF_PAGE_SIZE - 1) // STAFF_PAGE_SIZE)
+        if page_number > pages:
+            page_number = pages
+        tickets = db.scalars(
+            query.order_by(Ticket.created_at.desc())
+            .offset((page_number - 1) * STAFF_PAGE_SIZE)
+            .limit(STAFF_PAGE_SIZE)
+        ).all()
+
+    overdue_ids = {ticket.id for ticket in tickets if is_overdue(ticket)}
 
     # Ссылки пагинации и экспорта сохраняют текущие фильтры.
     url_filters = {key: value for key, value in filters.items() if value}
+    if overdue_only:
+        url_filters["overdue"] = "1"
     pagination_query = urlencode(url_filters)
     pagination_prefix = f"?{pagination_query}&" if pagination_query else "?"
     export_query = f"?{pagination_query}" if pagination_query else ""
@@ -234,6 +257,16 @@ def staff_list(
             "pagination_prefix": pagination_prefix,
             "export_query": export_query,
             "deleted": deleted,
+            "overdue_only": overdue_only,
+            "overdue_ids": overdue_ids,
+            "assignees": db.scalars(
+                select(User)
+                .where(User.role.in_(["staff", "admin"]), User.is_active.is_(True))
+                .order_by(User.name)
+            ).all(),
+            "bulk_updated": bulk_updated,
+            "bulk_skipped": bulk_skipped,
+            "bulk_error": bulk_error,
         },
     )
 
@@ -276,6 +309,15 @@ def staff_ticket(
         select(Attachment).where(Attachment.ticket_id == ticket.id).order_by(Attachment.created_at)
     ).all()
     assignees = db.scalars(select(User).where(User.role.in_(["staff", "admin"])).order_by(User.name)).all()
+    similar_tickets = find_similar_tickets(
+        db,
+        ticket.description,
+        ticket.location_id,
+        exclude_id=ticket.id,
+    )
+    merged_into = (
+        db.get(Ticket, ticket.merged_into_id) if ticket.merged_into_id else None
+    )
 
     return templates.TemplateResponse(
         request=request,
@@ -296,6 +338,12 @@ def staff_ticket(
             "max_comment_length": MAX_COMMENT_LENGTH,
             "max_note_length": MAX_NOTE_LENGTH,
             "tracking_ttl_days": TRACKING_LINK_TTL_DAYS or 90,
+            "similar_tickets": similar_tickets,
+            "merged_into": merged_into,
+            "ticket_overdue": is_overdue(ticket),
+            "ticket_overdue_hours": overdue_hours(ticket),
+            "ticket_sla_hours": target_hours(ticket),
+            "ticket_age_hours": round(age_hours(ticket), 1),
         },
     )
 
@@ -319,6 +367,12 @@ def update_status(
     ticket = _get_ticket_or_none(db, ticket_id)
     if ticket is None:
         return RedirectResponse("/staff", status_code=303)
+
+    if ticket.merged_into_id:
+        return _ticket_redirect(
+            ticket_id,
+            error="Заявка объединена с другой. Изменение статуса недоступно.",
+        )
 
     note = note.strip()
 
@@ -490,6 +544,315 @@ def delete_ticket(
             logger.warning("Не удалось удалить файл вложения: %s", path)
 
     return RedirectResponse("/staff?deleted=1", status_code=303)
+
+
+@router.post("/staff/bulk")
+def bulk_update(
+    request: Request,
+    action: str = Form(""),
+    ticket_ids: list[str] = Form([]),
+    assignee_id: str = Form(""),
+    priority: str = Form(""),
+    status: str = Form(""),
+    note: str = Form(""),
+    csrf_token: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    """Массовое назначение исполнителя, приоритета или статуса."""
+    require_csrf(request, csrf_token)
+    user = current_user(request, db)
+    if user is None:
+        return _redirect_login()
+
+    ids: list[int] = []
+    for raw in ticket_ids[:201]:
+        pk = as_int(raw)
+        if pk is not None and pk not in ids:
+            ids.append(pk)
+    if not ids:
+        return RedirectResponse(
+            "/staff?" + urlencode({"bulk_error": "Выберите хотя бы одну заявку."}),
+            status_code=303,
+        )
+    if len(ids) > 200:
+        return RedirectResponse(
+            "/staff?" + urlencode({"bulk_error": "За один раз можно обработать не больше 200 заявок."}),
+            status_code=303,
+        )
+
+    note = note.strip()
+    if len(note) > MAX_NOTE_LENGTH:
+        return RedirectResponse(
+            "/staff?" + urlencode({"bulk_error": f"Комментарий длиннее {MAX_NOTE_LENGTH} символов."}),
+            status_code=303,
+        )
+
+    assignee_value: int | None = None
+    assignee_raw = assignee_id.strip()
+    if assignee_raw:
+        assignee_pk = as_int(assignee_raw)
+        assignee = db.get(User, assignee_pk) if assignee_pk is not None else None
+        if assignee is None or assignee.role not in ("staff", "admin") or not assignee.is_active:
+            return RedirectResponse(
+                "/staff?" + urlencode({"bulk_error": "Исполнитель не найден."}),
+                status_code=303,
+            )
+        assignee_value = assignee.id
+
+    if action == "assign":
+        pass
+    elif action == "priority":
+        if priority not in PRIORITIES:
+            return RedirectResponse(
+                "/staff?" + urlencode({"bulk_error": "Выберите приоритет."}),
+                status_code=303,
+            )
+    elif action == "status":
+        if status not in STATUSES:
+            return RedirectResponse(
+                "/staff?" + urlencode({"bulk_error": "Выберите статус."}),
+                status_code=303,
+            )
+        if status in ("Решена", "Отклонена") and not note:
+            return RedirectResponse(
+                "/staff?" + urlencode({"bulk_error": "Для итогового статуса нужен комментарий."}),
+                status_code=303,
+            )
+    else:
+        return RedirectResponse(
+            "/staff?" + urlencode({"bulk_error": "Неизвестное массовое действие."}),
+            status_code=303,
+        )
+
+    updated = 0
+    skipped = 0
+
+    for ticket_id in ids:
+        ticket = _get_ticket_or_none(db, ticket_id)
+        if ticket is None or ticket.merged_into_id:
+            skipped += 1
+            continue
+
+        old_status = ticket.status
+        old_assignee = ticket.assignee_id
+        old_priority = ticket.priority
+
+        if action == "assign":
+            if old_assignee == assignee_value:
+                skipped += 1
+                continue
+            ticket.assignee_id = assignee_value
+            db.add(
+                TicketHistory(
+                    ticket_id=ticket.id,
+                    old_status=old_status,
+                    new_status=old_status,
+                    actor_id=user.id,
+                    note="Массовое назначение исполнителя",
+                )
+            )
+            record_audit(
+                db,
+                actor=user,
+                action="ticket.bulk_assign",
+                entity_type="ticket",
+                entity_id=ticket.id,
+                summary=f"{ticket.public_number}: массовое назначение исполнителя",
+                details={"assignee_id": {"old": old_assignee, "new": assignee_value}},
+            )
+
+        elif action == "priority":
+            if old_priority == priority:
+                skipped += 1
+                continue
+            ticket.priority = priority
+            record_audit(
+                db,
+                actor=user,
+                action="ticket.bulk_priority",
+                entity_type="ticket",
+                entity_id=ticket.id,
+                summary=f"{ticket.public_number}: приоритет {old_priority} → {priority}",
+                details={"priority": {"old": old_priority, "new": priority}},
+            )
+
+        else:  # status
+            if status == old_status:
+                skipped += 1
+                continue
+            if status not in allowed_transitions(old_status, user.role):
+                skipped += 1
+                continue
+            if (
+                status in ASSIGNEE_REQUIRED_STATUSES
+                and ticket.assignee_id is None
+                and assignee_value is None
+            ):
+                skipped += 1
+                continue
+
+            if assignee_value is not None:
+                ticket.assignee_id = assignee_value
+            ticket.status = status
+            db.add(
+                TicketHistory(
+                    ticket_id=ticket.id,
+                    old_status=old_status,
+                    new_status=status,
+                    actor_id=user.id,
+                    note=note,
+                )
+            )
+            if note:
+                db.add(
+                    Comment(
+                        ticket_id=ticket.id,
+                        author_id=user.id,
+                        body=note,
+                        visibility="public",
+                    )
+                )
+            record_audit(
+                db,
+                actor=user,
+                action="ticket.bulk_status",
+                entity_type="ticket",
+                entity_id=ticket.id,
+                summary=f"{ticket.public_number}: {old_status} → {status}",
+                details={
+                    "status": {"old": old_status, "new": status},
+                    "assignee_id": {"old": old_assignee, "new": ticket.assignee_id},
+                },
+            )
+
+        updated += 1
+
+    try:
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        logger.exception("Не удалось выполнить массовое действие %s", action)
+        return RedirectResponse(
+            "/staff?" + urlencode({"bulk_error": "Не удалось применить изменения. Попробуйте ещё раз."}),
+            status_code=303,
+        )
+
+    return RedirectResponse(
+        "/staff?"
+        + urlencode(
+            {
+                "bulk_updated": str(updated),
+                "bulk_skipped": str(skipped),
+            }
+        ),
+        status_code=303,
+    )
+
+
+@router.post("/staff/ticket/{ticket_id}/merge")
+def merge_ticket(
+    request: Request,
+    ticket_id: int,
+    target_id: str = Form(""),
+    csrf_token: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    """Присоединяет заявку-дубль к основной заявке (только администратор).
+
+    Вложения переносятся, описание дубля сохраняется внутренним комментарием,
+    дубль помечается «Отклонена» и получает ссылку на основную заявку.
+    """
+    require_csrf(request, csrf_token)
+    user, denial = require_roles(request, db, ("admin",))
+    if denial:
+        return denial
+
+    source = _get_ticket_or_none(db, ticket_id)
+    if source is None:
+        return RedirectResponse("/staff", status_code=303)
+    if source.merged_into_id:
+        return _ticket_redirect(ticket_id, error="Эта заявка уже объединена с другой.")
+    if source.status in FINAL_STATUSES:
+        return _ticket_redirect(
+            ticket_id, error="Объединять можно только открытые заявки."
+        )
+
+    target_pk = as_int(target_id)
+    target = db.get(Ticket, target_pk) if target_pk is not None else None
+    if target is None or target.id == source.id:
+        return _ticket_redirect(ticket_id, error="Выберите другую заявку для объединения.")
+    if target.merged_into_id:
+        return _ticket_redirect(
+            ticket_id, error="Целевая заявка уже объединена с другой."
+        )
+    if target.status in FINAL_STATUSES:
+        return _ticket_redirect(
+            ticket_id, error="Нельзя объединить с закрытой заявкой."
+        )
+
+    attachments = db.scalars(
+        select(Attachment).where(Attachment.ticket_id == source.id)
+    ).all()
+    for attachment in attachments:
+        attachment.ticket_id = target.id
+
+    db.add(
+        Comment(
+            ticket_id=target.id,
+            author_id=user.id,
+            body=(
+                f"Присоединена заявка {source.public_number}.\n\n"
+                f"{source.description}"
+            ),
+            visibility="internal",
+        )
+    )
+
+    old_status = source.status
+    source.status = "Отклонена"
+    source.merged_into_id = target.id
+    db.add(
+        TicketHistory(
+            ticket_id=source.id,
+            old_status=old_status,
+            new_status="Отклонена",
+            actor_id=user.id,
+            note=f"Объединена с {target.public_number}",
+        )
+    )
+    db.add(
+        TicketHistory(
+            ticket_id=target.id,
+            old_status=target.status,
+            new_status=target.status,
+            actor_id=user.id,
+            note=f"Присоединена заявка {source.public_number}",
+        )
+    )
+    record_audit(
+        db,
+        actor=user,
+        action="ticket.merge",
+        entity_type="ticket",
+        entity_id=source.id,
+        summary=f"{source.public_number} объединена с {target.public_number}",
+        details={
+            "source": source.public_number,
+            "target": target.public_number,
+            "attachments": len(attachments),
+        },
+    )
+
+    try:
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        logger.exception("Не удалось объединить заявки id=%s и id=%s", ticket_id, target.id)
+        return _ticket_redirect(
+            ticket_id, error="Не удалось объединить заявки. Попробуйте ещё раз."
+        )
+
+    return _ticket_redirect(target.id, saved="1")
 
 
 @router.post("/staff/ticket/{ticket_id}/tracking/revoke")

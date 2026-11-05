@@ -47,6 +47,11 @@
     <strong class="stat-value">{{ open_count }}</strong>
     <span class="hint">{{ open_percent }}% от всех</span>
   </article>
+  <article class="card stat-card{% if overdue_count %} stat-overdue{% endif %}">
+    <span class="stat-label">Просрочены</span>
+    <strong class="stat-value">{{ overdue_count }}</strong>
+    <span class="hint"><a href="/staff?overdue=1">показать список</a></span>
+  </article>
   <article class="card stat-card stat-resolved">
     <span class="stat-label">Решены</span>
     <strong class="stat-value">{{ resolved }}</strong>

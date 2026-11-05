@@ -25,6 +25,14 @@
   <div class="alert alert-warn">{{ message }}</div>
 {% endfor %}
 
+{% if bulk_error %}<div class="alert alert-error">{{ bulk_error }}</div>{% endif %}
+{% if bulk_updated or bulk_skipped %}
+  <div class="alert alert-ok">
+    Массовое действие выполнено: изменено {{ bulk_updated }},
+    пропущено {{ bulk_skipped }}.
+  </div>
+{% endif %}
+
 <form class="card filters" method="get" action="/staff">
   <input name="q" value="{{ filters.q }}" placeholder="Поиск по номеру или тексту">
 
@@ -65,33 +73,85 @@
     <input type="date" name="date_to" value="{{ filters.date_to }}">
   </label>
 
+  <label class="checkbox-row overdue-filter">
+    <input type="checkbox" name="overdue" value="1" {% if overdue_only %}checked{% endif %}>
+    <span>Только просроченные</span>
+  </label>
+
   <button class="btn btn-primary" type="submit">Найти</button>
   <a class="btn btn-ghost" href="/staff">Сбросить</a>
 </form>
 
 {% if tickets %}
-<table class="table">
-  <thead>
-    <tr>
-      <th>Номер</th><th>Дата</th><th>Кратко</th><th>Место</th>
-      <th>Категория</th><th>Приоритет</th><th>Исполнитель</th><th>Статус</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for t in tickets %}
-    <tr>
-      <td data-label="Номер"><a class="mono" href="/staff/ticket/{{ t.id }}">{{ t.public_number }}</a></td>
-      <td class="nowrap" data-label="Дата">{{ t.created_at.strftime("%d.%m.%Y %H:%M") }}</td>
-      <td data-label="Кратко">{{ t.title }}</td>
-      <td data-label="Место">{{ t.location.title if t.location else "—" }}</td>
-      <td data-label="Категория">{{ t.category.name if t.category else "—" }}</td>
-      <td data-label="Приоритет"><span class="badge" data-priority="{{ t.priority }}">{{ t.priority }}</span></td>
-      <td data-label="Исполнитель">{{ t.assignee.name if t.assignee else "—" }}</td>
-      <td data-label="Статус"><span class="badge" data-status="{{ t.status }}">{{ t.status }}</span></td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<form method="post" action="/staff/bulk" id="bulk-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+
+  <div class="card bulk-bar">
+    <div class="bulk-group">
+      <select name="assignee_id" aria-label="Исполнитель для массового назначения">
+        <option value="">— снять исполнителя —</option>
+        {% for a in assignees %}
+          <option value="{{ a.id }}">{{ a.name }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn-ghost btn-small" type="submit" name="action" value="assign">Назначить</button>
+    </div>
+
+    <div class="bulk-group">
+      <select name="priority" aria-label="Приоритет для массового изменения">
+        <option value="">— приоритет не менять —</option>
+        {% for p in priorities %}
+          <option value="{{ p }}">{{ p }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn-ghost btn-small" type="submit" name="action" value="priority">Изменить</button>
+    </div>
+
+    <div class="bulk-group">
+      <select name="status" aria-label="Статус для массового изменения">
+        <option value="">— статус не менять —</option>
+        {% for s in statuses %}
+          <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+      </select>
+      <input name="note" maxlength="{{ max_note_length|default(500) }}"
+             placeholder="Комментарий (для итогового статуса)">
+      <button class="btn btn-ghost btn-small" type="submit" name="action" value="status">Сменить</button>
+    </div>
+  </div>
+
+  <p class="hint bulk-hint">
+    <label><input type="checkbox" id="bulk-all"> Выбрать все на странице</label>
+    · выбрано: <span id="bulk-count">0</span>
+  </p>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th></th><th>Номер</th><th>Дата</th><th>Кратко</th><th>Место</th>
+        <th>Категория</th><th>Приоритет</th><th>Исполнитель</th><th>Статус</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in tickets %}
+      <tr{% if t.id in overdue_ids %} class="row-overdue"{% endif %}>
+        <td data-label="Выбор"><input type="checkbox" class="bulk-check" name="ticket_ids" value="{{ t.id }}"></td>
+        <td data-label="Номер"><a class="mono" href="/staff/ticket/{{ t.id }}">{{ t.public_number }}</a></td>
+        <td class="nowrap" data-label="Дата">{{ t.created_at.strftime("%d.%m.%Y %H:%M") }}</td>
+        <td data-label="Кратко">{{ t.title }}</td>
+        <td data-label="Место">{{ t.location.title if t.location else "—" }}</td>
+        <td data-label="Категория">{{ t.category.name if t.category else "—" }}</td>
+        <td data-label="Приоритет"><span class="badge" data-priority="{{ t.priority }}">{{ t.priority }}</span></td>
+        <td data-label="Исполнитель">{{ t.assignee.name if t.assignee else "—" }}</td>
+        <td data-label="Статус">
+          <span class="badge" data-status="{{ t.status }}">{{ t.status }}</span>
+          {% if t.id in overdue_ids %}<span class="badge badge-overdue">Просрочено</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</form>
 {% else %}
   <div class="card center">
     <h2>Ничего не найдено</h2>
@@ -111,4 +171,43 @@
   {% endif %}
 </nav>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const form = document.getElementById("bulk-form");
+  if (!form) return;
+
+  const all = document.getElementById("bulk-all");
+  const count = document.getElementById("bulk-count");
+  const checks = Array.from(form.querySelectorAll(".bulk-check"));
+
+  function update() {
+    const selected = checks.filter(function (item) { return item.checked; }).length;
+    if (count) count.textContent = String(selected);
+    if (all) all.checked = checks.length > 0 && selected === checks.length;
+  }
+
+  checks.forEach(function (item) {
+    item.addEventListener("change", update);
+  });
+
+  if (all) {
+    all.addEventListener("change", function () {
+      checks.forEach(function (item) { item.checked = all.checked; });
+      update();
+    });
+  }
+
+  form.addEventListener("submit", function (event) {
+    if (!checks.some(function (item) { return item.checked; })) {
+      event.preventDefault();
+      alert("Выберите хотя бы одну заявку.");
+    }
+  });
+
+  update();
+})();
+</script>
 {% endblock %}

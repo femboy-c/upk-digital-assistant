@@ -24,7 +24,11 @@ def _navigation_context(request: Request) -> dict:
         except Exception:
             # Меню не должно ломать страницу ошибки, если база недоступна.
             user = None
-    return {"nav_user": user}
+    my_tickets = request.session.get("my_tickets", [])
+    return {
+        "nav_user": user,
+        "my_tickets_count": len([token for token in my_tickets if token]),
+    }
 
 
 templates = Jinja2Templates(

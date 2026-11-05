@@ -40,15 +40,21 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 MAX_UPLOAD_TOTAL_MB = int(os.getenv("MAX_UPLOAD_TOTAL_MB", "200"))
 MAX_UPLOAD_TOTAL_BYTES = MAX_UPLOAD_TOTAL_MB * 1024 * 1024
 
-# Максимальный размер всего HTTP-запроса (форма + файл + заголовки).
+# Максимальный размер всего HTTP-запроса (форма + фотографии + заголовки).
 try:
-    MAX_REQUEST_BODY_MB = max(1, int(os.getenv("MAX_REQUEST_BODY_MB", "12")))
+    MAX_REQUEST_BODY_MB = max(1, int(os.getenv("MAX_REQUEST_BODY_MB", "30")))
 except ValueError:
-    MAX_REQUEST_BODY_MB = 12
+    MAX_REQUEST_BODY_MB = 30
 MAX_REQUEST_BODY_BYTES = MAX_REQUEST_BODY_MB * 1024 * 1024
 
 # Защита от изображений-«бомб»: максимум пикселей в одном файле.
 MAX_IMAGE_PIXELS = 40_000_000
+
+# Сколько фотографий можно приложить к одной заявке и до какого размера
+# сжимать их на сервере. Оригиналы не хранятся: это экономит диск и убирает EXIF.
+MAX_PHOTOS_PER_TICKET = 5
+MAX_PHOTO_DIMENSION = 1600
+PHOTO_JPEG_QUALITY = 82
 
 # Ограничения длины текста. Проверяются и на сервере, и в HTML (maxlength).
 MIN_DESCRIPTION_LENGTH = 10

@@ -13,7 +13,7 @@ from datetime import datetime
 import qrcode
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -22,14 +22,18 @@ from ..config import (
     LOCATION_GROUPS,
     MAX_DESCRIPTION_LENGTH,
     MAX_IMAGE_PIXELS,
+    MAX_PHOTOS_PER_TICKET,
+    MAX_PHOTO_DIMENSION,
     MAX_UPLOAD_TOTAL_BYTES,
     MIN_DESCRIPTION_LENGTH,
+    PHOTO_JPEG_QUALITY,
     PRIVACY_CONTACT_EMAIL,
     PRIVACY_POLICY_VERSION,
     TICKETS_RATE_LIMIT,
     TICKET_RETENTION_DAYS,
     TICKETS_RATE_WINDOW_SECONDS,
     UPLOAD_DIR,
+    public_base_url,
     qr_target_url,
     tracking_expiry,
 )
@@ -45,15 +49,28 @@ from ..models import (
 )
 from ..parsing import as_int
 from ..ratelimit import client_ip, is_limited, register_event
-from ..security import consent_required, hash_token, new_tracking_token, verify_csrf
+from ..security import (
+    consent_required,
+    hash_token,
+    new_tracking_token,
+    require_csrf,
+    verify_csrf,
+)
 from ..templating import templates
+from ..workflow import STATUS_STEPS, status_step
 
 router = APIRouter()
 
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
-SUFFIX_BY_TYPE = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
-MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 МБ
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 МБ на один файл
 UPLOAD_CHUNK_SIZE = 64 * 1024
+PHOTO_CONTENT_TYPE = "image/jpeg"
+PHOTO_SUFFIX = ".jpg"
+
+# Личный кабинет заявителя: список токенов живёт в подписанной cookie-сессии.
+# Это удобство для текущего браузера, а не замена секретной ссылке.
+MY_TICKETS_KEY = "my_tickets"
+MAX_MY_TICKETS = 20
 PHONE_RE = re.compile(r"^[0-9+()\-\s]{5,40}$")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -93,6 +110,48 @@ async def _read_upload_limited(upload: UploadFile, limit: int) -> bytes | None:
     return bytes(buffer)
 
 
+class PhotoTooLargeError(Exception):
+    """Изображение превышает допустимое число пикселей."""
+
+
+def _prepare_photo(raw: bytes) -> bytes:
+    """Проверяет изображение, поворачивает по EXIF и сжимает в JPEG.
+
+    Оригинал не сохраняется: это уменьшает диск, убирает метаданные и
+    приводит все фотографии к предсказуемому формату.
+    """
+    try:
+        with Image.open(io.BytesIO(raw)) as image:
+            if image.width * image.height > MAX_IMAGE_PIXELS:
+                raise PhotoTooLargeError
+            image.load()
+            image = ImageOps.exif_transpose(image)
+            image.thumbnail((MAX_PHOTO_DIMENSION, MAX_PHOTO_DIMENSION), Image.LANCZOS)
+
+            if image.mode in ("RGBA", "LA") or (
+                image.mode == "P" and "transparency" in image.info
+            ):
+                rgba = image.convert("RGBA")
+                background = Image.new("RGB", rgba.size, (255, 255, 255))
+                background.paste(rgba, mask=rgba.split()[-1])
+                image = background
+            else:
+                image = image.convert("RGB")
+
+            output = io.BytesIO()
+            image.save(
+                output,
+                format="JPEG",
+                quality=PHOTO_JPEG_QUALITY,
+                optimize=True,
+            )
+            return output.getvalue()
+    except PhotoTooLargeError:
+        raise
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as error:
+        raise ValueError("invalid image") from error
+
+
 def _form_data(db: Session):
     """Справочники для выпадающих списков."""
     categories = db.scalars(select(Category).order_by(Category.name)).all()
@@ -129,6 +188,8 @@ def _report_context(
         "selected_location_id": selected_location_id,
         "selected_category_id": selected_category_id,
         "max_description_length": MAX_DESCRIPTION_LENGTH,
+        "min_description_length": MIN_DESCRIPTION_LENGTH,
+        "max_photos_per_ticket": MAX_PHOTOS_PER_TICKET,
     }
 
 
@@ -205,6 +266,7 @@ async def create_ticket(
     personal_data_consent: str = Form(""),
     csrf_token: str = Form(""),
     website: str = Form(""),
+    photos: list[UploadFile] | None = File(None),
     photo: UploadFile | None = File(None),
     db: Session = Depends(get_db),
 ):
@@ -275,30 +337,43 @@ async def create_ticket(
     if category_id and category is None:
         return form_error("Выбрана неизвестная категория. Выберите категорию из списка.")
 
-    # 5. Фотографию проверяем до создания заявки, чтобы не писать в базу зря.
-    photo_content: bytes | None = None
+    # 5. Фотографии проверяем и сжимаем до создания заявки, чтобы не писать
+    # в базу зря. Старое поле photo поддерживаем для закешированных форм.
+    uploads = [item for item in (photos or []) if item is not None and item.filename]
     if photo is not None and photo.filename:
-        if photo.content_type not in ALLOWED_TYPES:
-            return form_error("Можно прикреплять только JPG, PNG или WEBP.")
-        photo_content = await _read_upload_limited(photo, MAX_FILE_SIZE)
-        if photo_content is None:
-            return form_error("Файл больше 5 МБ.")
-        try:
-            with Image.open(io.BytesIO(photo_content)) as image:
-                if image.width * image.height > MAX_IMAGE_PIXELS:
-                    return form_error(
-                        "Изображение слишком большое по размеру в пикселях. "
-                        "Уменьшите фотографию и попробуйте снова."
-                    )
-                image.verify()
-        except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
-            return form_error("Файл не похож на изображение. Приложите JPG, PNG или WEBP.")
+        uploads.append(photo)
+    if len(uploads) > MAX_PHOTOS_PER_TICKET:
+        return form_error(
+            f"Можно прикрепить не больше {MAX_PHOTOS_PER_TICKET} фотографий."
+        )
 
-        if _upload_dir_size() + len(photo_content) > MAX_UPLOAD_TOTAL_BYTES:
+    prepared_photos: list[bytes] = []
+    total_photo_size = 0
+    for upload in uploads:
+        if upload.content_type not in ALLOWED_TYPES:
+            return form_error("Можно прикреплять только JPG, PNG или WEBP.")
+        raw = await _read_upload_limited(upload, MAX_FILE_SIZE)
+        if raw is None:
+            return form_error("Каждый файл должен быть не больше 5 МБ.")
+        try:
+            prepared = _prepare_photo(raw)
+        except PhotoTooLargeError:
             return form_error(
-                "Хранилище вложений заполнено. Отправьте заявку без фотографии "
-                "или обратитесь к администратору."
+                "Одна из фотографий слишком большая по размеру в пикселях. "
+                "Уменьшите её и попробуйте снова."
             )
+        except ValueError:
+            return form_error(
+                "Один из файлов не похож на изображение. Приложите JPG, PNG или WEBP."
+            )
+        prepared_photos.append(prepared)
+        total_photo_size += len(prepared)
+
+    if _upload_dir_size() + total_photo_size > MAX_UPLOAD_TOTAL_BYTES:
+        return form_error(
+            "Хранилище вложений заполнено. Отправьте заявку без фотографий "
+            "или обратитесь к администратору."
+        )
 
     # 6. Номер заявки строим по реальному id, который выдаёт SQLite.
     # Это исключает коллизию при одновременной отправке двух заявок.
@@ -331,29 +406,32 @@ async def create_ticket(
     number = f"ДГУ-{datetime.now().year}-{ticket.id:06d}"
     ticket.public_number = number
 
-    # 7. Сохраняем фотографию вне static/ и добавляем запись о вложении.
-    saved_filename: str | None = None
-    if photo_content is not None and photo is not None:
-        saved_filename = f"{uuid.uuid4().hex}{SUFFIX_BY_TYPE[photo.content_type]}"
+    # 7. Сохраняем сжатые фотографии вне static/ и добавляем вложения.
+    saved_filenames: list[str] = []
+    for prepared in prepared_photos:
+        saved_filename = f"{uuid.uuid4().hex}{PHOTO_SUFFIX}"
         try:
             saved_path = UPLOAD_DIR / saved_filename
-            saved_path.write_bytes(photo_content)
+            saved_path.write_bytes(prepared)
             try:
                 os.chmod(saved_path, 0o600)
             except OSError:
                 pass
         except OSError:
             db.rollback()
+            for name in saved_filenames:
+                (UPLOAD_DIR / name).unlink(missing_ok=True)
             return _server_error(
                 request,
                 "Не удалось отправить заявку",
-                "Не удалось сохранить фотографию. Заявка не отправлена — попробуйте ещё раз.",
+                "Не удалось сохранить фотографии. Заявка не отправлена — попробуйте ещё раз.",
             )
+        saved_filenames.append(saved_filename)
         db.add(
             Attachment(
                 ticket_id=ticket.id,
                 storage_key=saved_filename,
-                file_type=photo.content_type,
+                file_type=PHOTO_CONTENT_TYPE,
             )
         )
 
@@ -363,8 +441,8 @@ async def create_ticket(
         db.commit()
     except SQLAlchemyError:
         db.rollback()
-        if saved_filename:
-            (UPLOAD_DIR / saved_filename).unlink(missing_ok=True)
+        for name in saved_filenames:
+            (UPLOAD_DIR / name).unlink(missing_ok=True)
         return _server_error(
             request,
             "Не удалось отправить заявку",
@@ -372,16 +450,22 @@ async def create_ticket(
         )
 
     register_event(rate_key, TICKETS_RATE_WINDOW_SECONDS)
+    _remember_ticket(request, token)
     return RedirectResponse(f"/success?number={number}&token={token}", status_code=303)
 
 
 @router.get("/success", response_class=HTMLResponse)
 def success(request: Request, number: str = "", token: str = ""):
     """Страница после отправки: номер заявки и ссылка отслеживания."""
+    _remember_ticket(request, token)
     return templates.TemplateResponse(
         request=request,
         name="success.html",
-        context={"number": number, "token": token},
+        context={
+            "number": number,
+            "token": token,
+            "base_url": public_base_url(request),
+        },
     )
 
 
@@ -395,6 +479,29 @@ def _ticket_by_token(db: Session, token: str) -> Ticket | None:
     return ticket
 
 
+def _session_tokens(request: Request) -> list[str]:
+    """Аккуратно достаёт список токенов из сессии."""
+    stored = request.session.get(MY_TICKETS_KEY, [])
+    if not isinstance(stored, list):
+        return []
+    return [token for token in stored if isinstance(token, str) and token]
+
+
+def _remember_ticket(request: Request, token: str) -> None:
+    """Добавляет токен в личный список текущего браузера."""
+    if not token:
+        return
+    tokens = [item for item in _session_tokens(request) if item != token]
+    tokens.insert(0, token)
+    request.session[MY_TICKETS_KEY] = tokens[:MAX_MY_TICKETS]
+
+
+def _forget_ticket(request: Request, token: str) -> None:
+    request.session[MY_TICKETS_KEY] = [
+        item for item in _session_tokens(request) if item != token
+    ]
+
+
 @router.get("/t/{token}", response_class=HTMLResponse)
 def track_by_link(request: Request, token: str, db: Session = Depends(get_db)):
     """Отслеживание по секретной ссылке."""
@@ -406,6 +513,7 @@ def track_by_link(request: Request, token: str, db: Session = Depends(get_db)):
             context={},
             status_code=404,
         )
+    _remember_ticket(request, token)
     return _render_track(request, db, ticket, token)
 
 
@@ -420,6 +528,7 @@ def track_form(request: Request, number: str = "", token: str = "", db: Session 
             )
         )
         if ticket and ticket.tracking_is_active:
+            _remember_ticket(request, token.strip())
             return _render_track(request, db, ticket, token.strip())
         return templates.TemplateResponse(
             request=request,
@@ -443,6 +552,9 @@ def _render_track(request: Request, db: Session, ticket: Ticket, token: str):
     attachments = db.scalars(
         select(Attachment).where(Attachment.ticket_id == ticket.id).order_by(Attachment.created_at)
     ).all()
+    merged_into = (
+        db.get(Ticket, ticket.merged_into_id) if ticket.merged_into_id else None
+    )
     return templates.TemplateResponse(
         request=request,
         name="track.html",
@@ -452,8 +564,58 @@ def _render_track(request: Request, db: Session, ticket: Ticket, token: str):
             "history": history,
             "attachments": attachments,
             "token": token,
+            "status_steps": STATUS_STEPS,
+            "status_step": status_step(ticket.status),
+            "base_url": public_base_url(request),
+            "merged_into": merged_into,
         },
     )
+
+
+@router.get("/my", response_class=HTMLResponse)
+def my_tickets(request: Request, db: Session = Depends(get_db)):
+    """Список заявок, сохранённых в этом браузере."""
+    tokens = _session_tokens(request)
+    items: list[tuple[Ticket, str]] = []
+    valid_tokens: list[str] = []
+
+    for token in tokens:
+        ticket = _ticket_by_token(db, token)
+        if ticket is None:
+            continue
+        items.append((ticket, token))
+        valid_tokens.append(token)
+
+    if valid_tokens != tokens:
+        request.session[MY_TICKETS_KEY] = valid_tokens
+
+    items.sort(key=lambda item: item[0].created_at, reverse=True)
+    return templates.TemplateResponse(
+        request=request,
+        name="my_tickets.html",
+        context={"items": items},
+    )
+
+
+@router.post("/my/remove")
+def remove_my_ticket(
+    request: Request,
+    token: str = Form(""),
+    csrf_token: str = Form(""),
+):
+    require_csrf(request, csrf_token)
+    _forget_ticket(request, token.strip())
+    return RedirectResponse("/my", status_code=303)
+
+
+@router.post("/my/clear")
+def clear_my_tickets(
+    request: Request,
+    csrf_token: str = Form(""),
+):
+    require_csrf(request, csrf_token)
+    request.session.pop(MY_TICKETS_KEY, None)
+    return RedirectResponse("/my", status_code=303)
 
 
 @router.get("/privacy", response_class=HTMLResponse)

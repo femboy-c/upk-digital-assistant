@@ -13,6 +13,7 @@ from ..database import get_db
 from ..filters import build_ticket_filters
 from ..models import Ticket
 from ..security import current_user
+from ..sla import is_overdue
 
 router = APIRouter()
 
@@ -30,10 +31,12 @@ def export_tickets(
     request: Request,
     q: str = "",
     status: str = "",
+    priority: str = "",
     category_id: str = "",
     location_id: str = "",
     date_from: str = "",
     date_to: str = "",
+    overdue: str = "",
     db: Session = Depends(get_db),
 ):
     user = current_user(request, db)
@@ -44,6 +47,7 @@ def export_tickets(
         db,
         q=q,
         status=status,
+        priority=priority,
         category_id=category_id,
         location_id=location_id,
         date_from=date_from,
@@ -54,6 +58,8 @@ def export_tickets(
     if conditions:
         query = query.where(*conditions)
     tickets = db.scalars(query.order_by(Ticket.created_at.desc())).all()
+    if overdue.strip().lower() in ("1", "true", "on", "yes"):
+        tickets = [ticket for ticket in tickets if is_overdue(ticket)]
 
     buffer = io.StringIO()
     buffer.write("\ufeff")

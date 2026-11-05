@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Публичный API демонстрационного ИИ-помощника."""
+"""Публичный API помощника, работающего по правилам и базе знаний."""
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select

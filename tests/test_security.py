@@ -112,5 +112,5 @@ def test_attachment_is_closed_and_available_by_rules(client: TestClient):
     assert login(client).status_code == 303
     staff_file = client.get(f"/staff/attachment/{attachment_id}")
     assert staff_file.status_code == 200
-    assert staff_file.headers["content-type"].startswith("image/png")
+    assert staff_file.headers["content-type"].startswith("image/jpeg")
     client.post("/logout", follow_redirects=False)

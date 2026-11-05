@@ -11,7 +11,78 @@
   <p>Сохраните ссылку ниже — по ней можно проверить статус. Ссылка содержит секретный код,
      не передавайте её посторонним.</p>
 
-  <p><a class="btn btn-primary" href="/t/{{ token }}">Открыть страницу отслеживания</a></p>
-  <p class="hint">Ссылка: <code>/t/{{ token }}</code></p>
+  <p class="tracking-link"><code id="tracking-url">{{ base_url }}/t/{{ token }}</code></p>
+  <div class="copy-row">
+    <button class="btn btn-ghost" type="button" id="copy-link">Скопировать ссылку</button>
+    <a class="btn btn-primary" href="/t/{{ token }}">Открыть страницу отслеживания</a>
+  </div>
+  <p class="hint" id="copy-status" aria-live="polite"></p>
+  <p class="hint"><a href="/my">Все мои заявки в этом браузере</a></p>
 </div>
+
+<div class="card">
+  <h2>Что дальше</h2>
+  <ol class="how-steps compact">
+    <li>
+      <span class="how-num" aria-hidden="true">1</span>
+      <div><strong>Заявку увидят сотрудники</strong><p>Они проверят описание и при необходимости уточнят детали.</p></div>
+    </li>
+    <li>
+      <span class="how-num" aria-hidden="true">2</span>
+      <div><strong>Назначат исполнителя</strong><p>В карточке появится ответственный и статус работы.</p></div>
+    </li>
+    <li>
+      <span class="how-num" aria-hidden="true">3</span>
+      <div><strong>Вы увидите результат</strong><p>Страница по ссылке обновится, когда проблему решат.</p></div>
+    </li>
+  </ol>
+  <p class="hint">Обычно заявку рассматривают в течение рабочего дня. Если ситуация опасна для людей — звоните 112.</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  try { localStorage.removeItem("upk-report-draft-v1"); } catch (error) {}
+})();
+
+(function () {
+  const button = document.getElementById("copy-link");
+  const url = document.getElementById("tracking-url");
+  const status = document.getElementById("copy-status");
+  if (!button || !url) return;
+
+  function showStatus(text) {
+    if (!status) return;
+    status.textContent = text;
+    setTimeout(function () { status.textContent = ""; }, 4000);
+  }
+
+  function fallbackCopy(text) {
+    const area = document.createElement("textarea");
+    area.value = text;
+    area.setAttribute("readonly", "");
+    area.style.position = "fixed";
+    area.style.left = "-9999px";
+    document.body.appendChild(area);
+    area.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (error) {}
+    document.body.removeChild(area);
+    return ok;
+  }
+
+  button.addEventListener("click", async function () {
+    const text = url.textContent.trim();
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(text);
+      copied = true;
+    } catch (error) {
+      copied = fallbackCopy(text);
+    }
+    showStatus(copied ? "Ссылка скопирована." : "Не удалось скопировать — выделите ссылку вручную.");
+  });
+})();
+</script>
 {% endblock %}

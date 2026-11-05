@@ -12,6 +12,7 @@ from ..database import get_db
 from ..filters import build_ticket_filters
 from ..models import Category, Location, STATUSES, Ticket
 from ..security import current_user
+from ..sla import is_overdue
 from ..templating import templates
 
 router = APIRouter()
@@ -64,6 +65,10 @@ def staff_stats(
     rejected = _count(db, *date_conditions, Ticket.status == "Отклонена")
     new_count = _count(db, *date_conditions, Ticket.status == "Новая")
     last_30_days = _count(db, Ticket.created_at >= datetime.now() - timedelta(days=30))
+    open_tickets = db.scalars(
+        select(Ticket).where(*date_conditions, Ticket.status.in_(OPEN_STATUSES))
+    ).all()
+    overdue_count = sum(1 for ticket in open_tickets if is_overdue(ticket))
 
     # Распределение по категориям. Считаем реальные заявки, включая «без категории».
     category_query = select(Ticket.category_id, func.count(Ticket.id))
@@ -109,6 +114,7 @@ def staff_stats(
             "resolved": resolved,
             "rejected": rejected,
             "new_count": new_count,
+            "overdue_count": overdue_count,
             "last_30_days": last_30_days,
             "category_rows": _rows_with_percent(category_rows, total),
             "location_rows": _rows_with_percent(location_rows, total),

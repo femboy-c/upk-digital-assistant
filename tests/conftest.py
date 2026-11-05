@@ -3,6 +3,9 @@
 import os
 import tempfile
 
+# Тесты не должны зависеть от .env: там может быть production-режим.
+# Значение выставляется до импорта app, поэтому load_dotenv его не перезапишет.
+os.environ["APP_ENV"] = "test"
 os.environ.setdefault("UPK_DB_PATH", os.path.join(tempfile.mkdtemp(prefix="upk-tests-"), "test.db"))
 os.environ.setdefault("UPK_UPLOAD_DIR", tempfile.mkdtemp(prefix="upk-uploads-"))
 os.environ.setdefault("UPK_DISABLE_CSRF", "1")

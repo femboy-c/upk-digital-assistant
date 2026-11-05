@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Мои заявки — Колледж ДГУ{% endblock %}
+
+{% block content %}
+<h1>Мои заявки</h1>
+<p class="lead">
+  Заявки, отправленные или открытые в этом браузере. Чтобы открыть их с другого
+  устройства, используйте секретную ссылку.
+</p>
+
+{% if items %}
+  <div class="card">
+    <ul class="my-tickets">
+      {% for ticket, token in items %}
+        <li>
+          <div class="row-between">
+            <a class="mono" href="/t/{{ token }}"><strong>{{ ticket.public_number }}</strong></a>
+            <span class="badge" data-status="{{ ticket.status }}">{{ ticket.status }}</span>
+          </div>
+          <p class="hint">
+            {{ ticket.created_at.strftime("%d.%m.%Y %H:%M") }}
+            {% if ticket.location %}· {{ ticket.location.title }}{% endif %}
+          </p>
+          <p class="my-ticket-text">{{ ticket.description[:180] }}{% if ticket.description|length > 180 %}…{% endif %}</p>
+          <form method="post" action="/my/remove" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <input type="hidden" name="token" value="{{ token }}">
+            <button class="btn btn-ghost btn-small" type="submit">Убрать из списка</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+
+    <form method="post" action="/my/clear"
+          onsubmit="return confirm('Убрать все заявки из списка в этом браузере? Сами заявки останутся у сотрудников.');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <button class="btn btn-ghost btn-small" type="submit">Очистить список</button>
+    </form>
+  </div>
+{% else %}
+  <div class="card center">
+    <p class="muted">Пока здесь нет сохранённых заявок.</p>
+    <a class="btn btn-primary" href="/">Сообщить о проблеме</a>
+  </div>
+{% endif %}
+
+<div class="card">
+  <h2>Добавить заявку в список</h2>
+  <p class="hint">
+    Если заявка была отправлена на другом устройстве, откройте её по секретной
+    ссылке — она появится в этом списке.
+  </p>
+  <a class="btn btn-ghost" href="/track">Проверить по номеру и коду</a>
+</div>
+{% endblock %}
