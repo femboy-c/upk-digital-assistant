@@ -2,12 +2,12 @@
 
 ## Почему сейчас сайт не находится по запросу «жалобы ДГУ»
 
-Публичный адрес сейчас — `https://unlucky-eagle-38.loca.lt`.
-Это временный туннель localtunnel (Cloudflare Quick Tunnel в этой сети
+Публичный адрес сейчас — `https://beach-moderator-sunshine-deeper.trycloudflare.com`.
+Это временный туннель Cloudflare Quick Tunnel (Cloudflare Quick Tunnel в этой сети
 нестабилен):
 
 - адрес случайный и меняется при перезапуске;
-- localtunnel отдаёт `X-Robots-Tag: noindex`, поэтому поисковики не увидят сайт;
+- Cloudflare Quick Tunnel отдаёт `X-Robots-Tag: noindex`, поэтому поисковики не увидят сайт;
 - сайт не добавлен в Яндекс.Вебмастер и Google Search Console.
 
 Пока адрес меняется, индексация бессмысленна: через день поиск будет вести на

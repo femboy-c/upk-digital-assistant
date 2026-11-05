@@ -3,8 +3,8 @@
 Дата передачи: 5 ноября 2026 года.
 
 > **Обновление 5 ноября 2026, 03:35.** Сайт запущен в режиме публичного пилота
-> через временный туннель localtunnel:
-> `https://unlucky-eagle-38.loca.lt`.
+> через временный туннель Cloudflare Quick Tunnel:
+> `https://beach-moderator-sunshine-deeper.trycloudflare.com`.
 > Подробности — `docs/PUBLIC_PILOT.md`. Разделы ниже про «только локальная сеть»
 > и демо-доступ `staff/staff123`, `admin/admin123` **устарели**: включён
 > `APP_ENV=production`, демо-пароль администратора заменён, учётная запись
@@ -19,10 +19,10 @@
 - **GitHub:** приватный репозиторий `femboy-c/upk-digital-assistant`, ветка `main`.
 - **Тесты:** `164 passed`.
 - **Сервер:** uvicorn на `127.0.0.1:8000`, публично — через временный
-  HTTPS-туннель localtunnel (Cloudflare Quick Tunnel в этой сети нестабилен).
+  HTTPS-туннель Cloudflare Quick Tunnel.
 - **Адреса:**
   - компьютер: `http://127.0.0.1:8000`
-  - публично: `https://unlucky-eagle-38.loca.lt`
+  - публично: `https://beach-moderator-sunshine-deeper.trycloudflare.com`
   - проверка: `/health`
 
 Основной сценарий:
@@ -32,13 +32,13 @@
 ## 2. Запуск, тесты, бэкап
 
 ```bash
-systemctl --user start upk.service upk-localtunnel.service
+systemctl --user start upk.service upk-tunnel.service
 ```
 
 Адрес туннеля смотрите в журнале:
 
 ```bash
-journalctl --user -u upk-localtunnel -n 20
+journalctl --user -u upk-tunnel -n 20
 ```
 
 Если порт занят:
@@ -49,9 +49,9 @@ fuser -k 8000/tcp
 
 Не использовать `pkill -f "uvicorn app.main:app"` — можно убить свою оболочку.
 
-Сейчас uvicorn и localtunnel запускаются через systemd-юниты пользователя.
+Сейчас uvicorn и Cloudflare Quick Tunnel запускаются через systemd-юниты пользователя.
 Systemd-сервис `upk-https` удалён вместе с локальным HTTPS. После перезагрузки
-проверьте `upk.service` и `upk-localtunnel.service`; адрес туннеля при
+проверьте `upk.service` и `upk-tunnel.service`; адрес туннеля при
 перезапуске может измениться.
 
 Тесты:
@@ -358,9 +358,8 @@ cd /home/mamai/upk
 36. Определён срок хранения данных и добавлен скрипт очистки старых заявок.
 37. Локальный HTTPS (порт 8443, локальный CA, systemd-сервис) был настроен, затем
     по просьбе пользователя полностью откатан.
-38. Запущен публичный пилот через временный туннель (localtunnel; Cloudflare
-    Quick Tunnel в этой сети нестабилен); включён
-    production-режим, демо-пароли отключены.
+38. Запущен публичный пилот через временный туннель Cloudflare Quick Tunnel;
+    включён production-режим, демо-пароли отключены.
 39. Добавлены подсказки формы, примеры, черновик, превью фото, копирование
     ссылки и визуальный прогресс статуса.
 40. Добавлены до 5 фотографий, сжатие до 1600 px и удаление EXIF.
@@ -466,8 +465,8 @@ MFA, баннер, уведомления Telegram/email, Redis-лимиты, Cl
 
 Публичный доступ:
 
-- сайт запущен в режиме публичного пилота через временный туннель localtunnel
-  `https://unlucky-eagle-38.loca.lt` (см. `docs/PUBLIC_PILOT.md`);
+- сайт запущен в режиме публичного пилота через временный туннель Cloudflare Quick Tunnel
+  `https://beach-moderator-sunshine-deeper.trycloudflare.com` (см. `docs/PUBLIC_PILOT.md`);
 - включён `APP_ENV=production`, uvicorn слушает только `127.0.0.1:8000`;
 - домена и постоянного адреса нет; адрес туннеля меняется при перезапуске;
 - для постоянного запуска нужен домен + именованный туннель Cloudflare либо
@@ -516,7 +515,7 @@ MFA, баннер, уведомления Telegram/email, Redis-лимиты, Cl
 - Не запускать тесты на реальной базе: они используют временную БД.
 - Не публиковать uvicorn-порт (8000) напрямую в интернет без HTTPS-прокси
   и ограничения доступа.
-- Текущий публичный адрес — временный туннель localtunnel, а не постоянный
+- Текущий публичный адрес — временный туннель Cloudflare Quick Tunnel, а не постоянный
   домен. Не печатать QR под него и не считать его финальным.
 - Демо-пароли уже отключены: `staff` деактивирован, пароль `admin` заменён.
   Не возвращать `staff/staff123` и `admin/admin123`.
@@ -551,8 +550,8 @@ MFA, баннер, уведомления Telegram/email, Redis-лимиты, Cl
 Проверка: .venv/bin/pytest -q (сейчас 164 passed)
 Режим: APP_ENV=production. Демо-учётка staff отключена, пароль admin заменён
 на случайный (не хранится в репозитории). Не возвращать admin/admin123.
-Публичный адрес: https://unlucky-eagle-38.loca.lt
-(временный туннель localtunnel, меняется при перезапуске; см.
+Публичный адрес: https://beach-moderator-sunshine-deeper.trycloudflare.com
+(временный туннель Cloudflare Quick Tunnel, меняется при перезапуске; см.
 docs/PUBLIC_PILOT.md). Постоянного домена нет.
 Локально uvicorn слушает только 127.0.0.1:8000; вход по прямому HTTP
 не сохраняет сессию из-за SESSION_HTTPS_ONLY=1.

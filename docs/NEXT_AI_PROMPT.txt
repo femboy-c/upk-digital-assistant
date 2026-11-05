@@ -1,9 +1,9 @@
 Ты продолжаешь проект «Цифровой помощник Колледжа ДГУ».
 
 ОБНОВЛЕНИЕ 05.11.2026: сайт уже запущен в режиме публичного пилота через
-временный туннель localtunnel. Читай docs/PUBLIC_PILOT.md. Состояние ниже
+временный туннель Cloudflare Quick Tunnel. Читай docs/PUBLIC_PILOT.md. Состояние ниже
 обновлено: APP_ENV=production, пароль admin заменён, staff отключён,
-uvicorn слушает 127.0.0.1:8000. Публичный адрес временный (*.loca.lt)
+uvicorn слушает 127.0.0.1:8000. Публичный адрес временный (*.trycloudflare.com)
 и меняется при перезапуске; Cloudflare Quick Tunnel в этой сети нестабилен.
 
 Путь: /home/mamai/upk
@@ -16,20 +16,20 @@ uvicorn слушает 127.0.0.1:8000. Публичный адрес време�
 
 ТЕКУЩИЙ РЕЖИМ РАБОТЫ:
 - APP_ENV=production, uvicorn слушает только 127.0.0.1:8000;
-- публичный HTTPS: https://unlucky-eagle-38.loca.lt
-  (временный localtunnel; меняется при перезапуске);
+- публичный HTTPS: https://beach-moderator-sunshine-deeper.trycloudflare.com
+  (временный Cloudflare Quick Tunnel; меняется при перезапуске);
 - постоянного домена и автозапуска нет;
 - поиска в Яндексе/Google пока нет: временный адрес не индексируется.
   Для поиска нужен домен + Вебмастер, см. docs/SEO.md;
 - .env: SESSION_HTTPS_ONLY=1, TRUST_PROXY=1, MAX_REQUEST_BODY_MB=30;
 - прямой вход по http://127.0.0.1:8000 не сохраняет сессию — нужен публичный
   HTTPS-адрес;
-- после перезагрузки проверить `upk.service` и `upk-localtunnel.service`.
+- после перезагрузки проверить `upk.service` и `upk-tunnel.service`.
 
 ЗАПУСК:
 cd /home/mamai/upk
 .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
-systemctl --user start upk.service upk-localtunnel.service
+systemctl --user start upk.service upk-tunnel.service
 
 Если порт занят:
 fuser -k 8000/tcp

@@ -6,10 +6,9 @@
 
 - Режим: `APP_ENV=production`.
 - Приложение: `127.0.0.1:8000`, наружу не слушает.
-- Публичный HTTPS: `https://unlucky-eagle-38.loca.lt`
-- Туннель: `localtunnel` (резервный вариант). Cloudflare Quick Tunnel в этой
-  сети рвёт соединение с edge каждые несколько минут, поэтому оставлен как
-  запасной, а публичный доступ идёт через localtunnel.
+- Публичный HTTPS: `https://beach-moderator-sunshine-deeper.trycloudflare.com`
+- Туннель: `Cloudflare Quick Tunnel`, бесплатный и временный. Проверен с
+  мобильным User-Agent и из внешней сети: промежуточной страницы нет.
 - Домена и постоянного адреса нет.
 
 Проверено снаружи:
@@ -37,33 +36,33 @@
 ## Как это запущено сейчас
 
 ```bash
-systemctl --user start upk.service upk-localtunnel.service
+systemctl --user start upk.service upk-tunnel.service
 ```
 
 Юниты лежат в `deploy/systemd-user/`. `cloudflared` установлен в
 `~/.local/bin/cloudflared` (без sudo), но его quick tunnel в этой сети
 нестабилен.
 
-Если localtunnel перезапустился и адрес изменился:
+Если Cloudflare Quick Tunnel перезапустился и адрес изменился:
 
 ```bash
-journalctl --user -u upk-localtunnel -n 20
+journalctl --user -u upk-tunnel -n 20
 # обновить PUBLIC_BASE_URL в .env и перезапустить upk.service
 ```
 
 ## Ограничения пилота
 
-- Адрес `*.loca.lt` меняется при каждом перезапуске туннеля.
+- Адрес `*.trycloudflare.com` меняется при каждом перезапуске туннеля.
 - QR-коды в `docs/qr/` по-прежнему ведут на локальный адрес
   `http://10.167.225.109:8000`. Перегенерировать их имеет смысл только после
   получения постоянного домена.
 - Это не постоянный публичный запуск: нет домена и стабильных QR. Для
   постоянного запуска нужен домен и именованный туннель Cloudflare
   (или VPS + Caddy).
-- localtunnel отдаёт свои заголовки `X-Robots-Tag: noindex`, поэтому поиск
+- Cloudflare Quick Tunnel отдаёт свои заголовки `X-Robots-Tag: noindex`, поэтому поиск
   в Яндексе/Google с него невозможен. Для поиска нужен постоянный домен и
   регистрация в Вебмастере — см. `docs/SEO.md`.
-- localtunnel — сторонний сервис: он терминирует HTTPS и видит трафик.
+- Cloudflare Quick Tunnel — сторонний сервис: он терминирует HTTPS и видит трафик.
   Для реальных персональных данных используйте только домен + свой прокси.
 - Прямой вход по `http://127.0.0.1:8000` после включения
   `SESSION_HTTPS_ONLY=1` не сохраняет сессию: для входа используйте публичный
@@ -110,7 +109,7 @@ journalctl --user -u upk-localtunnel -n 20
 ## Остановка пилота
 
 ```bash
-systemctl --user stop upk-localtunnel.service upk.service
+systemctl --user stop upk-tunnel.service upk.service
 ```
 
 Не использовать `pkill -f "uvicorn app.main:app"`.
