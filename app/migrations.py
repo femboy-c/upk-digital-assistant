@@ -33,6 +33,18 @@ def ensure_schema(target_engine: Engine | None = None) -> None:
             connection.exec_driver_sql(
                 "ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0"
             )
+        if "totp_secret" not in user_columns:
+            connection.exec_driver_sql(
+                "ALTER TABLE users ADD COLUMN totp_secret VARCHAR(64) DEFAULT ''"
+            )
+        if "totp_enabled" not in user_columns:
+            connection.exec_driver_sql(
+                "ALTER TABLE users ADD COLUMN totp_enabled INTEGER NOT NULL DEFAULT 0"
+            )
+        if "totp_last_counter" not in user_columns:
+            connection.exec_driver_sql(
+                "ALTER TABLE users ADD COLUMN totp_last_counter INTEGER NOT NULL DEFAULT 0"
+            )
 
         ticket_columns = _column_names(connection, "tickets")
         if "tracking_expires_at" not in ticket_columns:

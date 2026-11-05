@@ -97,9 +97,11 @@
             <a href="/staff/locations">Помещения и QR</a>
             {% if nav_user.role == "admin" %}
               <a href="/staff/users">Пользователи</a>
+              <a href="/staff/banner">Баннер</a>
               <a href="/staff/audit">Журнал аудита</a>
             {% endif %}
             <a href="/staff/password">Настройки аккаунта</a>
+            <a href="/staff/mfa">Безопасность входа</a>
 
             <form method="post" action="/logout">
               <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
@@ -112,6 +114,12 @@
       {% endif %}
     </nav>
   </header>
+
+  {% if site_banner %}
+    <div class="site-banner" role="status">
+      <div class="wrap">{{ site_banner.message }}</div>
+    </div>
+  {% endif %}
 
   <main class="wrap" id="main">
     {% block content %}{% endblock %}

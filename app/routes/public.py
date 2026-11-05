@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from ..antivirus import AntivirusError, VirusFoundError, scan_bytes
 from ..config import (
     LOCATION_GROUPS,
     MAX_DESCRIPTION_LENGTH,
@@ -47,6 +48,7 @@ from ..models import (
     Ticket,
     TicketHistory,
 )
+from ..notifications import notify_new_ticket
 from ..parsing import as_int
 from ..ratelimit import client_ip, is_limited, register_event
 from ..security import (
@@ -359,6 +361,18 @@ async def create_ticket(
         raw = await _read_upload_limited(upload, MAX_FILE_SIZE)
         if raw is None:
             return form_error("Каждый файл должен быть не больше 5 МБ.")
+
+        try:
+            scan_bytes(raw)
+        except VirusFoundError:
+            return form_error("Файл не прошёл проверку безопасности и не был принят.")
+        except AntivirusError:
+            return form_error(
+                "Проверка вложений временно недоступна. Попробуйте позже "
+                "или отправьте заявку без фотографии.",
+                status_code=503,
+            )
+
         try:
             prepared = _prepare_photo(raw)
         except PhotoTooLargeError:
@@ -454,6 +468,7 @@ async def create_ticket(
         )
 
     register_event(rate_key, TICKETS_RATE_WINDOW_SECONDS)
+    notify_new_ticket(ticket)
     _remember_ticket(request, token)
     return RedirectResponse(f"/success?number={number}&token={token}", status_code=303)
 

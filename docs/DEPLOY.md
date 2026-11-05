@@ -34,7 +34,7 @@ SECRET_KEY=<длинная случайная строка>
 PUBLIC_BASE_URL=https://upk.example.ru
 SESSION_HTTPS_ONLY=1
 TRUST_PROXY=1
-MAX_UPLOAD_TOTAL_MB=500
+MAX_UPLOAD_TOTAL_MB=200
 ```
 
 Сгенерировать секрет:
@@ -128,6 +128,9 @@ sudo systemctl status upk
   сотрудниках лучше перейти на PostgreSQL.
 - Приложение не выполняет антивирусную проверку вложений.
 - Обновляйте резервные копии и следите за свободным местом в `data/uploads/`.
+
+Дополнительно: MFA, Redis, ClamAV, уведомления и systemd-таймеры описаны в
+`docs/OPERATIONS.md`.
 
 ## 9. Финальная проверка
 

@@ -1,0 +1,14 @@
+[Unit]
+Description=UPK: временный туннель Cloudflare
+After=network-online.target upk.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/cloudflared tunnel --url http://127.0.0.1:8000 --no-autoupdate
+Restart=always
+RestartSec=5
+UMask=0077
+
+[Install]
+WantedBy=default.target

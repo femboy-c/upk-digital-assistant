@@ -27,7 +27,7 @@ from .database import BASE_DIR, SessionLocal, restrict_data_permissions
 from .log_redaction import install_log_redaction
 from .migrations import ensure_schema
 from .request_limits import RequestBodyLimitMiddleware
-from .routes import assistant, audit, export, files, locations, public, staff, stats, users
+from .routes import assistant, audit, banner, export, files, locations, public, staff, stats, users
 from .seed import seed_database
 from .templating import templates
 
@@ -126,7 +126,7 @@ async def security_headers(request: Request, call_next):
         "Content-Security-Policy",
         "default-src 'self'; "
         "img-src 'self' data:; "
-        "style-src 'self' 'unsafe-inline'; "
+        "style-src 'self'; "
         f"script-src 'self' 'nonce-{nonce}'; "
         "connect-src 'self'; "
         "form-action 'self'; "
@@ -156,6 +156,7 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 app.include_router(public.router)
 app.include_router(staff.router)
 app.include_router(locations.router)
+app.include_router(banner.router)
 app.include_router(users.router)
 app.include_router(audit.router)
 app.include_router(assistant.router)

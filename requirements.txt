@@ -8,3 +8,5 @@ python-multipart==0.0.33
 python-dotenv==1.2.4
 qrcode[pil]==8.2
 pillow==13.0.0
+redis==8.1.0
+clamd==1.0.2

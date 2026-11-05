@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Двухфакторный вход — панель колледжа{% endblock %}
+
+{% block content %}
+<a class="back" href="/staff">← К заявкам</a>
+
+<h1>Двухфакторный вход</h1>
+<p class="lead">
+  Дополнительная защита аккаунта: при входе понадобится код из
+  приложения-аутентификатора (Google Authenticator, Aegis, 1Password и similar).
+</p>
+
+{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+{% if saved %}<div class="alert alert-ok">Настройки сохранены.</div>{% endif %}
+
+{% if enabled %}
+  <div class="card">
+    <p><strong>Двухфакторный вход включён.</strong></p>
+    <p class="hint">
+      При следующем входе после пароля потребуется 6-значный код.
+      Отключение завершит остальные активные сессии.
+    </p>
+
+    <form class="form" method="post" action="/staff/mfa/disable">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+
+      <label for="password">Текущий пароль</label>
+      <input id="password" name="password" type="password" required
+             autocomplete="current-password">
+
+      <label for="disable-code">Код из приложения</label>
+      <input id="disable-code" name="code" inputmode="numeric"
+             autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
+
+      <button class="btn btn-danger" type="submit">Отключить двухфакторный вход</button>
+    </form>
+
+    <p class="hint">
+      Если телефон утерян, на сервере можно выполнить
+      <code>.venv/bin/python scripts/reset_mfa.py --login {{ user.login }}</code>.
+    </p>
+  </div>
+{% else %}
+  <div class="card">
+    <h2>1. Подключите приложение</h2>
+    <p>Откройте приложение-аутентификатор и отсканируйте QR-код.</p>
+    <div class="mfa-setup">
+      <img class="mfa-qr" src="/staff/mfa/qr" alt="QR-код для настройки двухфакторного входа">
+      <div>
+        <p class="hint">Если камера не работает, введите секрет вручную:</p>
+        <code id="mfa-secret">{{ secret }}</code>
+      </div>
+    </div>
+
+    <h2>2. Подтвердите код</h2>
+    <form class="form" method="post" action="/staff/mfa/enable">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+
+      <label for="enable-code">6-значный код из приложения</label>
+      <input id="enable-code" name="code" inputmode="numeric"
+             autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
+
+      <button class="btn btn-primary" type="submit">Включить двухфакторный вход</button>
+    </form>
+  </div>
+{% endif %}
+{% endblock %}

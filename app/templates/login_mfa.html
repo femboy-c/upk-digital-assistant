@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Подтверждение входа — Колледж ДГУ{% endblock %}
+
+{% block content %}
+<div class="card narrow">
+  <h1>Подтверждение входа</h1>
+  <p class="lead">
+    Введите 6-значный код из приложения-аутентификатора. Пароль уже принят.
+  </p>
+
+  {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+
+  <form class="form" method="post" action="/login/mfa">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+
+    <label for="code">Код подтверждения</label>
+    <input id="code" name="code" inputmode="numeric" autocomplete="one-time-code"
+           pattern="[0-9]{6}" maxlength="6" required autofocus>
+
+    <button class="btn btn-primary" type="submit">Войти</button>
+  </form>
+
+  <p class="hint"><a href="/login">← Вернуться ко входу</a></p>
+</div>
+{% endblock %}

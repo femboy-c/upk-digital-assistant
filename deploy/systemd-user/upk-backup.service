@@ -1,0 +1,9 @@
+[Unit]
+Description=UPK: резервная копия базы и вложений
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/upk
+EnvironmentFile=%h/upk/.env
+ExecStart=%h/upk/.venv/bin/python scripts/backup.py --keep 14

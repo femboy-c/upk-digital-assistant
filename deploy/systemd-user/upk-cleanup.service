@@ -1,0 +1,10 @@
+[Unit]
+Description=UPK: очистка старых заявок и осиротевших вложений
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/upk
+EnvironmentFile=%h/upk/.env
+ExecStart=%h/upk/.venv/bin/python scripts/cleanup_old_tickets.py
+ExecStart=%h/upk/.venv/bin/python scripts/cleanup_orphans.py

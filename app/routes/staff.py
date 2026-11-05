@@ -2,12 +2,14 @@
 """
 Панель сотрудника колледжа: вход, список заявок, карточка, статусы, комментарии.
 """
+import io
 import logging
 from datetime import datetime, timedelta
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+import qrcode
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -24,6 +26,8 @@ from ..config import (
 from ..database import get_db
 from ..duplicates import FINAL_STATUSES, find_similar_tickets
 from ..filters import build_ticket_filters
+from ..mfa import new_totp_secret, provisioning_uri, verify_totp
+from ..notifications import notify_status_change
 from ..models import (
     Attachment,
     Category,
@@ -114,6 +118,99 @@ def login(
             db.rollback()
             logger.exception("Не удалось обновить хеш пароля пользователя id=%s", user.id)
 
+    if user.totp_enabled:
+        request.session["pending_user_id"] = user.id
+        request.session["pending_user_version"] = user.session_version
+        request.session["pending_login"] = user.login
+        return RedirectResponse("/login/mfa", status_code=303)
+
+    request.session["user_id"] = user.id
+    request.session["user_version"] = user.session_version
+    return RedirectResponse("/staff", status_code=303)
+
+
+def _pending_mfa_user(request: Request, db: Session) -> User | None:
+    """Пользователь, который уже ввёл пароль и ждёт код второго фактора."""
+    user_id = request.session.get("pending_user_id")
+    version = request.session.get("pending_user_version")
+    if not user_id:
+        return None
+    user = db.get(User, user_id)
+    if (
+        user is None
+        or not user.is_active
+        or not user.totp_enabled
+        or user.session_version != version
+    ):
+        return None
+    return user
+
+
+@router.get("/login/mfa", response_class=HTMLResponse)
+def login_mfa_page(request: Request, db: Session = Depends(get_db)):
+    user = _pending_mfa_user(request, db)
+    if user is None:
+        request.session.pop("pending_user_id", None)
+        request.session.pop("pending_user_version", None)
+        request.session.pop("pending_login", None)
+        return RedirectResponse("/login", status_code=303)
+    return templates.TemplateResponse(
+        request=request,
+        name="login_mfa.html",
+        context={"error": ""},
+    )
+
+
+@router.post("/login/mfa")
+def login_mfa(
+    request: Request,
+    code: str = Form(""),
+    csrf_token: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    require_csrf(request, csrf_token)
+    user = _pending_mfa_user(request, db)
+    if user is None:
+        request.session.pop("pending_user_id", None)
+        request.session.pop("pending_user_version", None)
+        request.session.pop("pending_login", None)
+        return RedirectResponse("/login", status_code=303)
+
+    if login_is_blocked(request, user.login):
+        return templates.TemplateResponse(
+            request=request,
+            name="login_mfa.html",
+            context={"error": "Слишком много неверных кодов. Подождите несколько минут."},
+            status_code=429,
+        )
+
+    counter = verify_totp(user.totp_secret, code)
+    if counter is None or counter <= user.totp_last_counter:
+        register_login_failure(request, user.login)
+        return templates.TemplateResponse(
+            request=request,
+            name="login_mfa.html",
+            context={"error": "Неверный или уже использованный код."},
+            status_code=401,
+        )
+
+    reset_login_failures(request, user.login)
+    user.totp_last_counter = counter
+    try:
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        logger.exception("Не удалось сохранить MFA-код пользователя id=%s", user.id)
+        return templates.TemplateResponse(
+            request=request,
+            name="login_mfa.html",
+            context={"error": "Не удалось завершить вход. Попробуйте ещё раз."},
+            status_code=500,
+        )
+
+    request.session.pop("pending_user_id", None)
+    request.session.pop("pending_user_version", None)
+    request.session.pop("pending_login", None)
     request.session["user_id"] = user.id
     request.session["user_version"] = user.session_version
     return RedirectResponse("/staff", status_code=303)
@@ -175,6 +272,154 @@ def change_password(
     # Своя текущая сессия должна остаться рабочей, остальные — завершиться.
     request.session["user_version"] = user.session_version
     return RedirectResponse("/staff/password?saved=1", status_code=303)
+
+
+def _mfa_redirect(**params: str) -> RedirectResponse:
+    query = urlencode(params)
+    suffix = f"?{query}" if query else ""
+    return RedirectResponse(f"/staff/mfa{suffix}", status_code=303)
+
+
+@router.get("/staff/mfa", response_class=HTMLResponse)
+def mfa_page(
+    request: Request,
+    saved: str = "",
+    error: str = "",
+    db: Session = Depends(get_db),
+):
+    user = current_user(request, db)
+    if user is None:
+        return _redirect_login()
+
+    secret = ""
+    if not user.totp_enabled:
+        secret = request.session.get("mfa_pending_secret", "")
+        if not secret:
+            secret = new_totp_secret()
+            request.session["mfa_pending_secret"] = secret
+
+    return templates.TemplateResponse(
+        request=request,
+        name="staff_mfa.html",
+        context={
+            "user": user,
+            "enabled": user.totp_enabled,
+            "secret": secret,
+            "saved": saved,
+            "error": error,
+        },
+    )
+
+
+@router.get("/staff/mfa/qr")
+def mfa_qr(request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if user is None:
+        return RedirectResponse("/login", status_code=303)
+    secret = request.session.get("mfa_pending_secret", "")
+    if not secret:
+        raise HTTPException(404, "Код настройки не найден")
+
+    image = qrcode.make(provisioning_uri(secret, user.login))
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    buffer.seek(0)
+    return StreamingResponse(
+        buffer,
+        media_type="image/png",
+        headers={"Cache-Control": "private, no-store"},
+    )
+
+
+@router.post("/staff/mfa/enable")
+def mfa_enable(
+    request: Request,
+    code: str = Form(""),
+    csrf_token: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    require_csrf(request, csrf_token)
+    user = current_user(request, db)
+    if user is None:
+        return _redirect_login()
+    if user.totp_enabled:
+        return _mfa_redirect(error="Двухфакторный вход уже включён.")
+
+    secret = request.session.get("mfa_pending_secret", "")
+    if not secret:
+        return _mfa_redirect(error="Обновите страницу и получите новый QR-код.")
+
+    counter = verify_totp(secret, code)
+    if counter is None or counter <= user.totp_last_counter:
+        return _mfa_redirect(error="Неверный код. Проверьте время на телефоне и попробуйте снова.")
+
+    user.totp_secret = secret
+    user.totp_enabled = True
+    user.totp_last_counter = counter
+    user.session_version += 1
+    record_audit(
+        db,
+        actor=user,
+        action="user.mfa_enable",
+        entity_type="user",
+        entity_id=user.id,
+        summary=f"@{user.login}: включён двухфакторный вход",
+    )
+    try:
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        logger.exception("Не удалось включить MFA для пользователя id=%s", user.id)
+        return _mfa_redirect(error="Не удалось сохранить настройки. Попробуйте ещё раз.")
+
+    request.session.pop("mfa_pending_secret", None)
+    request.session["user_version"] = user.session_version
+    return _mfa_redirect(saved="1")
+
+
+@router.post("/staff/mfa/disable")
+def mfa_disable(
+    request: Request,
+    password: str = Form(""),
+    code: str = Form(""),
+    csrf_token: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    require_csrf(request, csrf_token)
+    user = current_user(request, db)
+    if user is None:
+        return _redirect_login()
+    if not user.totp_enabled:
+        return _mfa_redirect(error="Двухфакторный вход уже отключён.")
+
+    if not verify_password(password, user.password_hash):
+        return _mfa_redirect(error="Текущий пароль указан неверно.")
+
+    counter = verify_totp(user.totp_secret, code)
+    if counter is None or counter <= user.totp_last_counter:
+        return _mfa_redirect(error="Неверный или уже использованный код.")
+
+    user.totp_enabled = False
+    user.totp_secret = ""
+    user.totp_last_counter = 0
+    user.session_version += 1
+    record_audit(
+        db,
+        actor=user,
+        action="user.mfa_disable",
+        entity_type="user",
+        entity_id=user.id,
+        summary=f"@{user.login}: отключён двухфакторный вход",
+    )
+    try:
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        logger.exception("Не удалось отключить MFA для пользователя id=%s", user.id)
+        return _mfa_redirect(error="Не удалось сохранить настройки. Попробуйте ещё раз.")
+
+    request.session["user_version"] = user.session_version
+    return _mfa_redirect(saved="1")
 
 
 @router.get("/staff", response_class=HTMLResponse)
@@ -488,6 +733,8 @@ def update_status(
             )
         )
     db.commit()
+    if status != old_status:
+        notify_status_change(ticket, old_status, status, note)
     return _ticket_redirect(ticket_id, saved="1")
 
 

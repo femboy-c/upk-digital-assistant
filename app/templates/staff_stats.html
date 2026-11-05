@@ -101,9 +101,7 @@
           <span>{{ row.name }}</span>
           <strong>{{ row.count }}</strong>
         </div>
-        <div class="bar-track">
-          <div class="bar-fill" style="width: {{ row.percent }}%"></div>
-        </div>
+        <progress class="bar-progress" max="100" value="{{ row.percent }}">{{ row.percent }}%</progress>
         <span class="hint">{{ row.percent }}%</span>
       </div>
     {% else %}
@@ -119,9 +117,7 @@
           <span>{{ row.name }}</span>
           <strong>{{ row.count }}</strong>
         </div>
-        <div class="bar-track">
-          <div class="bar-fill" style="width: {{ row.percent }}%"></div>
-        </div>
+        <progress class="bar-progress" max="100" value="{{ row.percent }}">{{ row.percent }}%</progress>
         <span class="hint">{{ row.percent }}%</span>
       </div>
     {% else %}

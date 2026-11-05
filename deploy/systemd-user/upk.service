@@ -1,0 +1,16 @@
+[Unit]
+Description=UPK: веб-приложение
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/upk
+EnvironmentFile=%h/upk/.env
+ExecStart=%h/upk/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=3
+UMask=0077
+
+[Install]
+WantedBy=default.target

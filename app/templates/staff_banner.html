@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Баннер — панель колледжа{% endblock %}
+
+{% block content %}
+<a class="back" href="/staff">← К заявкам</a>
+
+<h1>Баннер плановых работ</h1>
+<p class="lead">
+  Сообщение показывается на всех страницах сайта над основным содержимым.
+  Используйте для плановых работ, отключения воды или важных объявлений.
+</p>
+
+{% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+{% if saved %}<div class="alert alert-ok">Баннер сохранён.</div>{% endif %}
+
+<div class="card">
+  <form class="form" method="post" action="/staff/banner">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+
+    <label for="message">Текст баннера</label>
+    <textarea id="message" name="message" rows="4" maxlength="{{ max_banner_length }}"
+              placeholder="Например: 7 ноября столовая не работает, заявки принимаются через сайт.">{{ banner.message if banner else "" }}</textarea>
+    <p class="hint">До {{ max_banner_length }} символов. Пустой текст нельзя включить.</p>
+
+    <label class="checkbox-row">
+      <input type="checkbox" name="is_active" value="1"
+             {% if banner and banner.is_active %}checked{% endif %}>
+      <span>Показывать баннер на сайте</span>
+    </label>
+
+    <button class="btn btn-primary" type="submit">Сохранить</button>
+  </form>
+
+  {% if banner and banner.updated_at %}
+    <p class="hint">Последнее изменение: {{ banner.updated_at.strftime("%d.%m.%Y %H:%M") }}</p>
+  {% endif %}
+</div>
+{% endblock %}

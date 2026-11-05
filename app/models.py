@@ -42,6 +42,10 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     # Растёт при смене пароля. Старые cookie-сессии после этого недействительны.
     session_version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # Двухфакторный вход (TOTP). Секрет хранится в base32, включение — флагом.
+    totp_secret: Mapped[str] = mapped_column(String(64), default="")
+    totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    totp_last_counter: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
 
 class Category(Base):
@@ -179,6 +183,19 @@ class Attachment(Base):
     storage_key: Mapped[str] = mapped_column(String(255))
     file_type: Mapped[str] = mapped_column(String(80), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class Banner(Base):
+    """Одно объявление на публичной части (плановые работы и т.п.)."""
+
+    __tablename__ = "banner"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    message: Mapped[str] = mapped_column(Text, default="")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now, onupdate=datetime.now
+    )
 
 
 class KnowledgeBase(Base):

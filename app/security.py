@@ -9,15 +9,18 @@ import hashlib
 import hmac
 import os
 import secrets
-import time
-from collections import defaultdict
 
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from .database import get_db
 from .models import User
-from .ratelimit import client_ip
+from .ratelimit import (
+    client_ip,
+    login_is_limited,
+    register_login_failure as record_login_failure,
+    reset_login_failures as clear_login_failures,
+)
 
 # Сколько раз "перемешиваем" пароль. Чем больше — тем медленнее подобрать.
 # 600 000 — актуальная рекомендация OWASP для PBKDF2-HMAC-SHA256.
@@ -31,9 +34,7 @@ CSRF_SESSION_KEY = "_csrf_token"
 LOGIN_MAX_ATTEMPTS = 5
 LOGIN_WINDOW_SECONDS = 10 * 60
 
-# Небольшой счётчик неудачных входов. Для одного процесса uvicorn этого
-# достаточно; при нескольких процессах нужен общий Redis или аналог.
-_login_failures: dict[str, list[float]] = defaultdict(list)
+
 
 
 
@@ -154,30 +155,18 @@ def _login_key(request: Request, login: str) -> str:
 
 def login_is_blocked(request: Request, login: str) -> bool:
     """Слишком много неудачных попыток за короткое время?"""
-    key = _login_key(request, login)
-    now = time.monotonic()
-    recent = [moment for moment in _login_failures.get(key, []) if now - moment < LOGIN_WINDOW_SECONDS]
-    _login_failures[key] = recent
-    return len(recent) >= LOGIN_MAX_ATTEMPTS
+    return login_is_limited(
+        _login_key(request, login),
+        LOGIN_MAX_ATTEMPTS,
+        LOGIN_WINDOW_SECONDS,
+    )
 
 
 def register_login_failure(request: Request, login: str) -> None:
     """Запоминает неудачную попытку входа."""
-    now = time.monotonic()
-    key = _login_key(request, login)
-    _login_failures[key].append(now)
-
-    # Не даём словарю расти бесконечно при переборе разных логинов.
-    if len(_login_failures) > 5000:
-        cutoff = now - LOGIN_WINDOW_SECONDS
-        for old_key in list(_login_failures):
-            recent = [moment for moment in _login_failures[old_key] if moment >= cutoff]
-            if recent:
-                _login_failures[old_key] = recent
-            else:
-                _login_failures.pop(old_key, None)
+    record_login_failure(_login_key(request, login), LOGIN_WINDOW_SECONDS)
 
 
 def reset_login_failures(request: Request, login: str) -> None:
     """Сбрасывает счётчик после успешного входа."""
-    _login_failures.pop(_login_key(request, login), None)
+    clear_login_failures(_login_key(request, login))

@@ -43,6 +43,28 @@ SITE_DESCRIPTION = (
 YANDEX_VERIFICATION = os.getenv("YANDEX_VERIFICATION", "").strip()
 GOOGLE_VERIFICATION = os.getenv("GOOGLE_VERIFICATION", "").strip()
 
+# Необязательные уведомления сотрудникам. Без настроек ничего не отправляется.
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
+try:
+    SMTP_PORT = max(1, int(os.getenv("SMTP_PORT", "587")))
+except ValueError:
+    SMTP_PORT = 587
+SMTP_USER = os.getenv("SMTP_USER", "").strip()
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_FROM = os.getenv("SMTP_FROM", "").strip()
+SMTP_TLS = os.getenv("SMTP_TLS", "1").strip().lower() in ("1", "true", "yes")
+NOTIFY_EMAIL = os.getenv("NOTIFY_EMAIL", "").strip()
+
+# Необязательная проверка загружаемых файлов через ClamAV (clamd).
+# Если CLAMAV_HOST задан, ошибка сканера блокирует загрузку (fail closed).
+CLAMAV_HOST = os.getenv("CLAMAV_HOST", "").strip()
+try:
+    CLAMAV_PORT = max(1, int(os.getenv("CLAMAV_PORT", "3310")))
+except ValueError:
+    CLAMAV_PORT = 3310
+
 # Вложения храним вне static/: доступ к ним выдаётся только через проверяемые роуты.
 UPLOAD_DIR = Path(os.getenv("UPK_UPLOAD_DIR", str(BASE_DIR / "data" / "uploads")))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -72,6 +94,7 @@ MIN_DESCRIPTION_LENGTH = 10
 MAX_DESCRIPTION_LENGTH = 5000
 MAX_COMMENT_LENGTH = 2000
 MAX_NOTE_LENGTH = 500
+MAX_BANNER_LENGTH = 500
 
 # Сколько заявок показывать на одной странице панели колледжа.
 STAFF_PAGE_SIZE = 25

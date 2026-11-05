@@ -38,7 +38,7 @@ fuser -k 8000/tcp
 ТЕСТЫ:
 cd /home/mamai/upk
 .venv/bin/pytest -q
-Сейчас: 149 passed.
+Сейчас: 162 passed.
 
 ДОСТУП:
 - демо-учётка staff отключена;
@@ -91,7 +91,11 @@ GIT:
 - CSRF, rate limit, honeypot, закрытые вложения, лимиты текста, noindex,
   лимит HTTP-запроса 30 МБ, потоковые загрузки, отзыв сессий по session_version,
   no-store для закрытых страниц, редактирование токенов в access-log;
-- CSP с nonce без unsafe-inline для скриптов, COOP/CORP и другие заголовки;
+- CSP с nonce без unsafe-inline для скриптов и стилей, COOP/CORP и другие
+  заголовки;
+- MFA (TOTP), баннер плановых работ, уведомления Telegram/email;
+- Redis-лимиты, ClamAV, очистка осиротевших вложений, systemd-таймеры;
+- CI с тестами и pip-audit;
 - PBKDF2 600 000, автоматический пересчёт старых хешей, защита от перебора
   логинов по времени, лимит входа по реальному IP за Cloudflare;
 - лимит перебора кодов отслеживания;
@@ -109,19 +113,21 @@ GIT:
 - app/log_redaction.py — скрытие токенов в логах;
 - app/duplicates.py — поиск похожих заявок и объединение;
 - app/sla.py — нормативы и просрочка;
+- app/mfa.py — TOTP, app/notifications.py — Telegram/email;
+- app/antivirus.py — ClamAV, app/ratelimit.py — память/Redis;
+- app/routes/banner.py — баннер плановых работ;
 - app/templates/my_tickets.html — личный кабинет;
 - docs/SEO.md — домен, Вебмастер, sitemap и поиск;
 - docs/SECURITY.md — аудит, CSP, пароли и чек-лист;
+- docs/OPERATIONS.md — автозапуск, таймеры, MFA, Redis, ClamAV;
 - requirements.txt — зафиксированные версии, requirements-dev.txt — тесты;
-- tests/ — 149 тестов.
+- tests/ — 162 теста.
 
 БЛИЖАЙШИЕ ЗАДАЧИ (согласовать с пользователем):
 1. Постоянный домен + именованный туннель Cloudflare.
-2. Баннер плановых работ с админ-страницей.
-3. Cron/systemd timer для очистки старых заявок.
-4. Уведомления Telegram/email.
-5. Очистка осиротевших вложений, Redis/PostgreSQL, MFA, style-src без
-   unsafe-inline, pip-audit/Trivy в CI.
+2. PostgreSQL и полноценные миграции.
+3. Мониторинг, алертинг и централизованные логи.
+4. Регулярное обновление зависимостей по pip-audit.
 
 НЕЛЬЗЯ:
 - коммитить .env, data/, data/uploads/, backups/;
@@ -134,5 +140,5 @@ GIT:
 
 ПОСЛЕ ЛЮБЫХ ИЗМЕНЕНИЙ:
 1. .venv/bin/python scripts/backup.py (если меняются данные/схема);
-2. .venv/bin/pytest -q — должно быть 149+ passed;
+2. .venv/bin/pytest -q — должно быть 162+ passed;
 3. перезапустить uvicorn, если менялись .py-файлы.
